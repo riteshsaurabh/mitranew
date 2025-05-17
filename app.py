@@ -473,7 +473,7 @@ if data_loaded:
         # Get company name for the chart title
         company_name = company_info.get('shortName', stock_symbol)
         # Display the stock prediction section with animated chart
-        stock_prediction.display_prediction_section(stock_symbol, hist_data, company_name, is_indian_stock)
+        stock_prediction.display_prediction_section(stock_symbol, stock_data, company_name, is_indian_stock)
         
         # Historical Performance
         st.subheader("Historical Performance")

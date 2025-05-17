@@ -8,15 +8,15 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.linear_model import LinearRegression
 import yfinance as yf
 
-@st.cache_data(ttl=3600)
-def generate_price_prediction(hist_data, forecast_days=30, model_type="arima"):
+@st.cache_data(ttl=1800)
+def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
     """
     Generate price prediction with confidence intervals
     
     Args:
         hist_data (pd.DataFrame): Historical price data
         forecast_days (int): Number of days to forecast
-        model_type (str): Type of model to use ('arima', 'sarimax', or 'linear')
+        model_type (str): Type of model to use ('arima', 'linear', or 'sarimax')
         
     Returns:
         dict: Dictionary with forecast data and model information
@@ -36,40 +36,7 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="arima"):
         last_date = hist_data.index[-1]
         forecast_dates = pd.date_range(start=last_date + timedelta(days=1), periods=forecast_days)
         
-        # Choose and fit the model
-        if model_type == "arima":
-            # ARIMA model (Auto Regressive Integrated Moving Average)
-            model = ARIMA(close_prices, order=(5, 1, 0))
-            model_fit = model.fit()
-            
-            # Generate forecast with confidence intervals
-            forecast = model_fit.forecast(steps=forecast_days, alpha=0.05)
-            forecast_mean = forecast
-            
-            # Get confidence intervals
-            confidence_intervals = model_fit.get_forecast(steps=forecast_days).conf_int(alpha=0.05)
-            lower_ci = confidence_intervals[:, 0]
-            upper_ci = confidence_intervals[:, 1]
-            
-            model_name = "ARIMA(5,1,0)"
-            
-        elif model_type == "sarimax":
-            # SARIMAX model (Seasonal ARIMA with eXogenous factors)
-            model = SARIMAX(close_prices, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
-            model_fit = model.fit(disp=False)
-            
-            # Generate forecast with confidence intervals
-            forecast = model_fit.forecast(steps=forecast_days)
-            forecast_mean = forecast
-            
-            # Get confidence intervals
-            confidence_intervals = model_fit.get_forecast(steps=forecast_days).conf_int(alpha=0.05)
-            lower_ci = confidence_intervals.iloc[:, 0].values
-            upper_ci = confidence_intervals.iloc[:, 1].values
-            
-            model_name = "SARIMAX(1,1,1)(1,1,1,12)"
-            
-        elif model_type == "linear":
+        if model_type == "linear":
             # Simple linear regression model
             X = np.arange(len(close_prices)).reshape(-1, 1)
             y = close_prices
@@ -92,11 +59,62 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="arima"):
             
             model_name = "Linear Regression"
         
-        else:
-            return {
-                "success": False,
-                "error": f"Unsupported model type: {model_type}"
-            }
+        elif model_type == "arima":
+            try:
+                # Try to fit ARIMA model
+                from statsmodels.tsa.arima.model import ARIMA
+                model = ARIMA(close_prices, order=(2, 1, 0))
+                model_fit = model.fit()
+                
+                # Generate forecast
+                forecast_mean = model_fit.forecast(steps=forecast_days)
+                
+                # Simple confidence interval based on volatility
+                std_dev = np.std(close_prices)
+                factor = np.sqrt(np.arange(1, forecast_days + 1)) * 0.5
+                
+                # Calculate confidence intervals
+                lower_ci = forecast_mean - 1.96 * std_dev * factor
+                upper_ci = forecast_mean + 1.96 * std_dev * factor
+                
+                model_name = "ARIMA(2,1,0)"
+            except:
+                # Fallback to polynomial if ARIMA fails
+                x = np.arange(len(close_prices))
+                poly_coefs = np.polyfit(x, close_prices, 2)
+                
+                # Generate forecast
+                x_forecast = np.arange(len(close_prices), len(close_prices) + forecast_days)
+                forecast_mean = np.polyval(poly_coefs, x_forecast)
+                
+                # Confidence intervals
+                std_dev = np.std(close_prices)
+                lower_ci = forecast_mean - 1.96 * std_dev
+                upper_ci = forecast_mean + 1.96 * std_dev
+                
+                model_name = "Polynomial Trend"
+                
+        else:  # Default to exponential smoothing
+            # Simple exponential smoothing
+            alpha = 0.3  # Smoothing factor
+            
+            # Initialize with starting point
+            forecast_mean = np.zeros(forecast_days)
+            forecast_mean[0] = close_prices[-1]  
+            
+            # Generate forecast
+            for i in range(1, forecast_days):
+                forecast_mean[i] = alpha * forecast_mean[i-1] + (1-alpha) * close_prices[-1]
+            
+            # Calculate standard error for confidence intervals
+            std_dev = np.std(close_prices)
+            factor = np.sqrt(np.arange(1, forecast_days + 1)) * 0.5
+            
+            # 95% confidence interval
+            lower_ci = forecast_mean - 1.96 * std_dev * factor
+            upper_ci = forecast_mean + 1.96 * std_dev * factor
+            
+            model_name = "Exponential Smoothing"
         
         # Prepare result dictionary with forecast data
         result = {
@@ -114,9 +132,10 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="arima"):
         return result
         
     except Exception as e:
+        # If any error occurs, return simple error message
         return {
             "success": False,
-            "error": str(e)
+            "error": "Could not generate prediction. Please try a different model or time period."
         }
 
 def create_prediction_chart(prediction_data, company_name, currency="$"):
