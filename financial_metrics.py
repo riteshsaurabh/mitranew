@@ -133,8 +133,15 @@ def calculate_performance_metrics(hist_data, info):
             performance['sixMonth'] = ((latest_close / hist_data['Close'].iloc[-127]) - 1) * 100
         
         # YTD return
-        ytd_start = datetime(datetime.now().year, 1, 1)
-        ytd_data = hist_data[hist_data.index >= ytd_start]
+        current_year = datetime.now().year
+        ytd_start = datetime(current_year, 1, 1)
+        # Convert index to datetime if it's not already
+        if not isinstance(hist_data.index, pd.DatetimeIndex):
+            hist_data.index = pd.to_datetime(hist_data.index)
+        # Use datetime objects without timezone for comparison
+        # Convert any timezone-aware datetimes to naive datetimes for comparison
+        naive_dates = hist_data.index.tz_localize(None) if hist_data.index.tz is not None else hist_data.index
+        ytd_data = hist_data[naive_dates >= ytd_start]
         if not ytd_data.empty:
             performance['ytd'] = ((latest_close / ytd_data['Close'].iloc[0]) - 1) * 100
         
