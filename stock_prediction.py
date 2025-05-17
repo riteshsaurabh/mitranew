@@ -22,11 +22,11 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
         dict: Dictionary with forecast data and model information
     """
     try:
-        # Make sure we have adequate data
-        if len(hist_data) < 30:
+        # Make sure we have some data, but don't require as many points
+        if len(hist_data) < 10:
             return {
                 "success": False,
-                "error": "Not enough historical data for prediction (need at least 30 data points)"
+                "error": "Need at least 10 days of price data for prediction"
             }
         
         # Extract the closing prices
@@ -302,59 +302,90 @@ def display_prediction_section(stock_symbol, hist_data, company_name, is_indian=
     """
     st.subheader("📈 Price Prediction & Forecast")
     
+    # Check if we have enough data points first
+    if len(hist_data) < 10:
+        st.warning("Not enough historical data available for prediction. Try selecting a longer time period.")
+        return
+    
+    # Make sure index is datetime format
+    if not isinstance(hist_data.index, pd.DatetimeIndex):
+        try:
+            hist_data.index = pd.to_datetime(hist_data.index)
+        except:
+            st.error("Could not process date information in the historical data.")
+            return
+    
     # Options for prediction settings
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        forecast_days = st.slider("Forecast Days", min_value=7, max_value=90, value=30, step=7,
-                                  help="Number of days to forecast into the future")
+        # Limit max forecast days based on data size
+        max_days = min(90, len(hist_data))
+        default_days = min(30, max_days // 2)
+        step = max(1, max_days // 10)
+        
+        forecast_days = st.slider(
+            "Forecast Days", 
+            min_value=7, 
+            max_value=max_days, 
+            value=default_days, 
+            step=step,
+            help="Number of days to forecast into the future"
+        )
     
     with col2:
-        model_type = st.selectbox("Prediction Model", 
-                                 ["arima", "linear", "sarimax"],
-                                 format_func=lambda x: {
-                                     "arima": "ARIMA (Time Series)",
-                                     "sarimax": "SARIMAX (Seasonal)",
-                                     "linear": "Linear Regression"
-                                 }.get(x, x),
-                                 help="Select the forecasting model to use")
+        model_type = st.selectbox(
+            "Prediction Model",
+            ["linear", "arima", "smoothing"],  # Default to linear as most reliable
+            format_func=lambda x: {
+                "arima": "ARIMA (Time Series)",
+                "smoothing": "Exponential Smoothing",
+                "linear": "Linear Regression"
+            }.get(x, x),
+            help="Select the forecasting model to use"
+        )
     
     # Generate prediction with a progress indicator
     with st.spinner("Generating price prediction..."):
-        prediction = generate_price_prediction(hist_data, forecast_days, model_type)
+        # Use a try-except block for additional error handling
+        try:
+            prediction = generate_price_prediction(hist_data, forecast_days, model_type)
+            
+            # Set currency based on whether it's an Indian stock
+            currency = "₹" if is_indian else "$"
+            
+            # Create and display the prediction chart
+            fig = create_prediction_chart(prediction, company_name, currency)
+            st.plotly_chart(fig, use_container_width=True)
         
-        # Set currency based on whether it's an Indian stock
-        currency = "₹" if is_indian else "$"
-        
-        # Create and display the prediction chart
-        fig = create_prediction_chart(prediction, company_name, currency)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Display prediction insights
-    if prediction["success"]:
-        last_price = prediction["last_price"]
-        forecast_end_price = prediction["forecast_mean"][-1]
-        change_pct = ((forecast_end_price - last_price) / last_price) * 100
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Current Price", f"{currency} {last_price:.2f}", delta=None)
-        
-        with col2:
-            st.metric(f"Predicted Price ({forecast_days} days)", 
-                      f"{currency} {forecast_end_price:.2f}", 
-                      f"{change_pct:.2f}%")
-        
-        with col3:
-            confidence_range = f"{currency} {prediction['lower_ci'][-1]:.2f} - {currency} {prediction['upper_ci'][-1]:.2f}"
-            st.metric("95% Confidence Range", confidence_range)
-        
-        # Add prediction disclaimer
-        st.info("""
-        **Disclaimer:** This price prediction is for educational purposes only and should not be used as financial advice. 
-        The models are simple forecasts based on historical patterns and do not account for news events, earnings, or market sentiment.
-        """)
-    else:
-        st.error(f"Failed to generate prediction: {prediction['error']}")
-        st.info("Try a different stock with more historical data or adjust the prediction parameters.")
+            # Display prediction insights
+            if prediction["success"]:
+                last_price = prediction["last_price"]
+                forecast_end_price = prediction["forecast_mean"][-1]
+                change_pct = ((forecast_end_price - last_price) / last_price) * 100
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Current Price", f"{currency} {last_price:.2f}", delta=None)
+                
+                with col2:
+                    st.metric(f"Predicted Price ({forecast_days} days)", 
+                            f"{currency} {forecast_end_price:.2f}", 
+                            f"{change_pct:.2f}%")
+                
+                with col3:
+                    confidence_range = f"{currency} {prediction['lower_ci'][-1]:.2f} - {currency} {prediction['upper_ci'][-1]:.2f}"
+                    st.metric("95% Confidence Range", confidence_range)
+                
+                # Add prediction disclaimer
+                st.info("""
+                **Disclaimer:** This price prediction is for educational purposes only and should not be used as financial advice. 
+                The models are simple forecasts based on historical patterns and do not account for news events, earnings, or market sentiment.
+                """)
+            else:
+                st.error(f"Failed to generate prediction: {prediction['error']}")
+                st.info("Try selecting a different prediction model or adjust the time period for analysis.")
+        except Exception as e:
+            st.error(f"An error occurred while generating the prediction: {str(e)}")
+            st.info("Try using a different prediction model or select a different stock/time period.")
