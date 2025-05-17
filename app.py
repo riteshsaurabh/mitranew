@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import utils
 import financial_metrics
+import watchlist
 
 # Page configuration
 st.set_page_config(
@@ -13,6 +14,10 @@ st.set_page_config(
     page_icon="📈",
     layout="wide"
 )
+
+# Initialize session state for watchlist integration
+if 'selected_stock' not in st.session_state:
+    st.session_state['selected_stock'] = None
 
 # Title and description
 st.title("Comprehensive Stock Analysis Dashboard")
@@ -33,7 +38,12 @@ with col2:
     col_symbol, col_period = st.columns([1, 1])
     
     with col_symbol:
-        stock_symbol = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, GOOGL)", "AAPL").upper()
+        # Check if a stock was selected from the watchlist
+        initial_value = st.session_state.get('selected_stock', 'AAPL')
+        stock_symbol = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, GOOGL)", initial_value).upper()
+        # Reset the selected stock after use
+        if st.session_state.get('selected_stock'):
+            st.session_state['selected_stock'] = None
     
     with col_period:
         time_period = st.selectbox(
@@ -72,7 +82,8 @@ if data_loaded:
         "🔍 Detailed Analysis", 
         "💰 Financial Statements", 
         "📈 Performance Analysis",
-        "📋 Research Report"
+        "📋 Research Report",
+        "⭐ Watchlists"
     ])
     
     # Dashboard Overview Tab
@@ -415,6 +426,43 @@ if data_loaded:
             st.write("- Regulatory challenges")
             st.write("- Economic slowdown")
             st.write("- Supply chain disruptions")
+            
+    # Watchlists Tab
+    with main_tabs[5]:
+        st.header("Stock Watchlists")
+        
+        # Add button to save current stock to watchlist
+        st.subheader(f"Save {stock_symbol} to Watchlist")
+        
+        user = watchlist.get_user()
+        user_watchlists = watchlist.get_user_watchlists(user.id)
+        
+        if user_watchlists:
+            selected_watchlist = st.selectbox(
+                "Select a watchlist to add this stock to:",
+                options=[wl.name for wl in user_watchlists],
+                key="select_watchlist_for_add"
+            )
+            
+            # Get the selected watchlist ID
+            selected_watchlist_id = None
+            for wl in user_watchlists:
+                if wl.name == selected_watchlist:
+                    selected_watchlist_id = wl.id
+                    break
+            
+            if selected_watchlist_id and st.button(f"Add {stock_symbol} to {selected_watchlist}"):
+                success = watchlist.add_to_watchlist(selected_watchlist_id, stock_symbol)
+                if success:
+                    st.success(f"Added {stock_symbol} to {selected_watchlist}")
+                else:
+                    st.error(f"Failed to add {stock_symbol} to watchlist")
+        
+        # Add horizontal divider
+        st.markdown("---")
+        
+        # Display all watchlists and their stocks
+        watchlist.render_watchlist_ui()
     
     # Download section
     st.header("Export Data")

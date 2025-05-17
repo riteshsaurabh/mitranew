@@ -20,10 +20,6 @@ author = "agent"
 task = "workflow.run"
 args = "Stock Analysis Dashboard"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "run_stock_dashboard"
-
 [[workflows.workflow]]
 name = "Stock Analysis Dashboard"
 author = "agent"
@@ -32,14 +28,6 @@ author = "agent"
 task = "shell.exec"
 args = "pip install yfinance plotly && streamlit run app.py --server.port 5000"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "run_stock_dashboard"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pip install yfinance plotly && streamlit run app.py --server.port 5000"
 
 [[ports]]
 localPort = 5000

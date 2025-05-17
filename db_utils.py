@@ -81,12 +81,31 @@ def update_stock_prices(symbol, period="1y"):
                     date = datetime.strptime(str(date)[:19], "%Y-%m-%d %H:%M:%S")
             
             # Create new stock price record
-            # Convert numpy types to Python native types
-            open_price = float(row.get('Open')) if 'Open' in row and row.get('Open') is not None else None
-            high_price = float(row.get('High')) if 'High' in row and row.get('High') is not None else None
-            low_price = float(row.get('Low')) if 'Low' in row and row.get('Low') is not None else None
-            close_price = float(row.get('Close')) if 'Close' in row and row.get('Close') is not None else None
-            volume = int(row.get('Volume')) if 'Volume' in row and row.get('Volume') is not None else None
+            # Convert numpy types to Python native types safely
+            try:
+                open_price = float(row['Open']) if 'Open' in row else None
+            except (TypeError, ValueError):
+                open_price = None
+                
+            try:
+                high_price = float(row['High']) if 'High' in row else None
+            except (TypeError, ValueError):
+                high_price = None
+                
+            try:
+                low_price = float(row['Low']) if 'Low' in row else None
+            except (TypeError, ValueError):
+                low_price = None
+                
+            try:
+                close_price = float(row['Close']) if 'Close' in row else None
+            except (TypeError, ValueError):
+                close_price = None
+                
+            try:
+                volume = int(row['Volume']) if 'Volume' in row else None
+            except (TypeError, ValueError):
+                volume = None
             
             price = db.StockPrice(
                 stock_id=stock.id,
