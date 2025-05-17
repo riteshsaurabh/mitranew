@@ -2,3 +2,51 @@
 headless = true
 address = "0.0.0.0"
 port = 5000
+
+# Theme Option 1: Professional Blue-Gold (Default)
+[theme]
+# Primary accent color for interactive elements
+primaryColor = "#0063B2"  # Deep Blue
+# Background color for the main content area
+backgroundColor = "#FFFFFF"  # White
+# Background color for sidebar and most interactive widgets 
+secondaryBackgroundColor = "#F0F8FF"  # Light Blue
+# Color used for almost all text
+textColor = "#333333"  # Dark Gray
+# Font family for all text in the app, except code blocks
+font = "sans-serif"
+
+# Other theme options are commented out below.
+# To use a different theme, comment out the current theme and uncomment one below
+
+# Theme Option 2: Modern Green Finance
+# [theme]
+# primaryColor = "#007755"  # Deep Green
+# backgroundColor = "#FFFFFF"  # White  
+# secondaryBackgroundColor = "#F5FFF9"  # Mint Green
+# textColor = "#1E1E1E"  # Almost Black
+# font = "sans-serif"
+
+# Theme Option 3: Vibrant Orange-Blue
+# [theme]
+# primaryColor = "#FF6B1A"  # Vibrant Orange
+# backgroundColor = "#FFFFFF"  # White
+# secondaryBackgroundColor = "#F9F9FF"  # Very Light Blue
+# textColor = "#2D3047"  # Navy Blue
+# font = "sans-serif"
+
+# Theme Option 4: Dark Mode Finance
+# [theme]
+# primaryColor = "#00CF91"  # Bright Teal
+# backgroundColor = "#121212"  # Near Black
+# secondaryBackgroundColor = "#1E1E1E"  # Dark Gray
+# textColor = "#E0E0E0"  # Light Gray
+# font = "sans-serif"
+
+# Theme Option 5: Premium Gold
+# [theme]
+# primaryColor = "#D4AF37"  # Gold
+# backgroundColor = "#FFFFFF"  # White
+# secondaryBackgroundColor = "#F5F5F5"  # Light Gray
+# textColor = "#2C3E50"  # Dark Blue-Gray
+# font = "sans-serif"
