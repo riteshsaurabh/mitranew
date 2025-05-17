@@ -10,6 +10,43 @@ import simple_watchlist
 import indian_markets
 import stock_news
 
+# Function to get peer stock symbols based on sector
+def get_peer_symbols(symbol, sector, is_indian=False):
+    """
+    Get peer stock symbols based on sector
+    
+    Args:
+        symbol (str): Current stock symbol
+        sector (str): Stock sector
+        is_indian (bool): Whether it's an Indian stock
+        
+    Returns:
+        list: List of peer stock symbols
+    """
+    # Define peer stocks for different sectors (focusing on Indian markets)
+    peers = {
+        "Technology": ["INFY.NS", "TCS.NS", "WIPRO.NS", "HCLTECH.NS"],
+        "Financial Services": ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS"],
+        "Consumer Cyclical": ["TATAMOTORS.NS", "M&M.NS", "MARUTI.NS", "HEROMOTOCO.NS"],
+        "Communications": ["BHARTIARTL.NS", "IDEA.NS", "TATACOMM.NS", "INDIAMART.NS"],
+        "Energy": ["RELIANCE.NS", "ONGC.NS", "NTPC.NS", "POWERGRID.NS"],
+        "Healthcare": ["SUNPHARMA.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS"]
+    }
+    
+    # Default to technology if sector not found
+    if sector not in peers:
+        sector = "Technology"
+    
+    # Get peers for the sector
+    sector_peers = peers[sector].copy()
+    
+    # Remove the current symbol if it's in the list
+    if symbol in sector_peers:
+        sector_peers.remove(symbol)
+    
+    # Return up to 4 peers
+    return sector_peers[:4]
+
 # Page configuration
 st.set_page_config(
     page_title="Stock Analysis Dashboard",
@@ -465,13 +502,71 @@ if data_loaded:
         if sector != 'N/A':
             st.write(f"Comparison with other companies in the {sector} sector:")
             
-            # Example peer metrics (in reality would be dynamically generated)
+            # Get appropriate peer companies based on sector
+            peer_symbols = get_peer_symbols(stock_symbol, sector, is_indian_stock)
+            
+            # Generate column for company names with their symbols
+            companies = [f"{company_info.get('shortName', stock_symbol)} ({stock_symbol})"]
+            pe_ratios = [company_info.get('trailingPE', 'N/A')]
+            market_caps = [company_info.get('marketCap', 0) / 1_000_000_000]
+            dividend_yields = [company_info.get('dividendYield', 0) * 100 if company_info.get('dividendYield') is not None else 'N/A']
+            returns = [ytd_performance]
+            
+            # Add industry average at the end
+            peer_symbols.append("Industry Average")
+            
+            # Map of representative company data - would be real data in production
+            sector_data = {
+                "Technology": {
+                    "INFY.NS": {"name": "Infosys", "pe": 23.4, "mcap": 89.2, "div": 2.7, "returns": 13.5},
+                    "TCS.NS": {"name": "Tata Consultancy", "pe": 25.1, "mcap": 135.7, "div": 2.2, "returns": 10.3},
+                    "WIPRO.NS": {"name": "Wipro", "pe": 18.9, "mcap": 41.3, "div": 1.9, "returns": 7.8},
+                    "HCLTECH.NS": {"name": "HCL Technologies", "pe": 17.5, "mcap": 38.7, "div": 3.1, "returns": 9.5},
+                    "Industry Average": {"name": "Industry Average", "pe": 21.2, "mcap": 76.2, "div": 2.5, "returns": 10.2}
+                },
+                "Financial Services": {
+                    "HDFCBANK.NS": {"name": "HDFC Bank", "pe": 18.6, "mcap": 120.8, "div": 1.8, "returns": 8.5},
+                    "ICICIBANK.NS": {"name": "ICICI Bank", "pe": 16.9, "mcap": 98.4, "div": 1.5, "returns": 14.2},
+                    "SBIN.NS": {"name": "State Bank of India", "pe": 12.3, "mcap": 85.1, "div": 2.1, "returns": 16.7},
+                    "AXISBANK.NS": {"name": "Axis Bank", "pe": 15.7, "mcap": 67.3, "div": 1.7, "returns": 12.1},
+                    "Industry Average": {"name": "Industry Average", "pe": 15.9, "mcap": 93.0, "div": 1.8, "returns": 12.9}
+                },
+                "Consumer Cyclical": {
+                    "TATAMOTORS.NS": {"name": "Tata Motors", "pe": 14.5, "mcap": 25.6, "div": 0.9, "returns": 19.7},
+                    "M&M.NS": {"name": "Mahindra & Mahindra", "pe": 16.2, "mcap": 19.8, "div": 1.2, "returns": 21.3},
+                    "MARUTI.NS": {"name": "Maruti Suzuki", "pe": 28.4, "mcap": 31.5, "div": 0.8, "returns": 11.6},
+                    "HEROMOTOCO.NS": {"name": "Hero MotoCorp", "pe": 15.9, "mcap": 12.7, "div": 2.4, "returns": 8.3},
+                    "Industry Average": {"name": "Industry Average", "pe": 18.7, "mcap": 22.4, "div": 1.3, "returns": 15.2}
+                }
+            }
+            
+            # Get default sector if not in our map
+            default_sector = "Technology"
+            if sector not in sector_data:
+                sector_to_use = default_sector
+            else:
+                sector_to_use = sector
+                
+            # Add peer data
+            for peer in peer_symbols:
+                if peer == stock_symbol:
+                    continue  # Skip the current stock
+                    
+                if peer in sector_data[sector_to_use]:
+                    peer_info = sector_data[sector_to_use][peer]
+                    companies.append(f"{peer_info['name']} ({peer})")
+                    pe_ratios.append(peer_info['pe'])
+                    market_caps.append(peer_info['mcap'])
+                    dividend_yields.append(peer_info['div'])
+                    returns.append(peer_info['returns'])
+            
+            # Create the dataframe with all data
             peers_data = {
-                'Company': [company_info.get('shortName', stock_symbol), 'Peer 1', 'Peer 2', 'Peer 3', 'Industry Average'],
-                'P/E Ratio': [company_info.get('trailingPE', 'N/A'), 15.2, 18.7, 12.4, 16.1],
-                'Market Cap (B)': [company_info.get('marketCap', 0) / 1_000_000_000, 120.5, 85.2, 45.7, 95.8],
-                'Dividend Yield (%)': [company_info.get('dividendYield', 0) * 100 if company_info.get('dividendYield') is not None else 'N/A', 2.1, 1.8, 2.5, 2.2],
-                'YTD Return (%)': [ytd_performance, 12.5, 8.7, 15.2, 11.8]
+                'Company': companies,
+                'P/E Ratio': pe_ratios,
+                'Market Cap (B)': market_caps,
+                'Dividend Yield (%)': dividend_yields,
+                'YTD Return (%)': returns
             }
             
             # Convert to DataFrame and display

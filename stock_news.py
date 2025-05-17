@@ -28,6 +28,9 @@ def get_stock_news(symbol, max_news=5):
         stock = yf.Ticker(symbol)
         news = stock.news
         
+        # Debug the news data
+        st.session_state['debug_news'] = news if news else []
+        
         # Filter and format the news
         if news and len(news) > 0:
             # Sort by date (newest first)
@@ -46,12 +49,34 @@ def get_stock_news(symbol, max_news=5):
                 else:
                     date = "Unknown date"
                 
+                # Get title and publisher, with robust error handling
+                title = "No title"
+                if 'title' in article and article['title']:
+                    title = article['title']
+                
+                publisher = "Unknown publisher"
+                if 'publisher' in article and article['publisher']:
+                    if isinstance(article['publisher'], str):
+                        publisher = article['publisher']
+                    elif isinstance(article['publisher'], dict) and 'name' in article['publisher']:
+                        publisher = article['publisher']['name']
+                
+                # Ensure link is a valid URL
+                link = "#"
+                if 'link' in article and article['link']:
+                    link = article['link']
+                
+                # Ensure summary exists
+                summary = "No summary available"
+                if 'summary' in article and article['summary']:
+                    summary = article['summary']
+                
                 # Append formatted article
                 formatted_news.append({
-                    'title': article.get('title', 'No title'),
-                    'publisher': article.get('publisher', 'Unknown publisher'),
-                    'link': article.get('link', '#'),
-                    'summary': article.get('summary', 'No summary available'),
+                    'title': title,
+                    'publisher': publisher,
+                    'link': link,
+                    'summary': summary,
                     'date': date
                 })
             
