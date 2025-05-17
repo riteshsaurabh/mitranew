@@ -1,0 +1,198 @@
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+from datetime import datetime, timedelta
+import requests
+from bs4 import BeautifulSoup
+import re
+import trafilatura
+import time
+import random
+
+@st.cache_data(ttl=3600)
+def get_stock_news(symbol, max_news=5):
+    """
+    Get news articles for a specific stock
+    
+    Args:
+        symbol (str): Stock symbol to get news for
+        max_news (int): Maximum number of news articles to return
+        
+    Returns:
+        list: List of news article dictionaries
+    """
+    try:
+        # Try to get news from Yahoo Finance
+        stock = yf.Ticker(symbol)
+        news = stock.news
+        
+        # Filter and format the news
+        if news and len(news) > 0:
+            # Sort by date (newest first)
+            news = sorted(news, key=lambda x: x.get('providerPublishTime', 0), reverse=True)
+            
+            # Limit to max_news
+            news = news[:max_news]
+            
+            # Format the articles
+            formatted_news = []
+            for article in news:
+                # Convert timestamp to date
+                timestamp = article.get('providerPublishTime', 0)
+                if timestamp:
+                    date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+                else:
+                    date = "Unknown date"
+                
+                # Append formatted article
+                formatted_news.append({
+                    'title': article.get('title', 'No title'),
+                    'publisher': article.get('publisher', 'Unknown publisher'),
+                    'link': article.get('link', '#'),
+                    'summary': article.get('summary', 'No summary available'),
+                    'date': date
+                })
+            
+            return formatted_news
+        
+        # If no news found from Yahoo Finance, return empty list
+        return []
+    
+    except Exception as e:
+        st.error(f"Error fetching news for {symbol}: {str(e)}")
+        return []
+
+def extract_article_content(url):
+    """
+    Extract the main content from a news article URL
+    
+    Args:
+        url (str): URL of the news article
+        
+    Returns:
+        str: Main content of the article
+    """
+    try:
+        # Get the article content
+        downloaded = trafilatura.fetch_url(url)
+        content = trafilatura.extract(downloaded)
+        
+        # If content is empty, try alternate method
+        if not content:
+            response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.extract()
+            
+            # Get text
+            content = soup.get_text()
+            
+            # Break into lines and remove leading and trailing space
+            lines = (line.strip() for line in content.splitlines())
+            # Break multi-headlines into a line each
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            # Drop blank lines
+            content = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        return content
+    except Exception as e:
+        st.warning(f"Error extracting article content: {str(e)}")
+        return "Could not extract article content."
+
+def summarize_article(content, title="", max_length=500):
+    """
+    Summarize a news article
+    
+    Args:
+        content (str): Article content to summarize
+        title (str): Article title for context
+        max_length (int): Maximum length of summary
+        
+    Returns:
+        str: Summarized article
+    """
+    # If content is too short, just return it
+    if len(content) < max_length:
+        return content
+    
+    # Try basic summarization by extracting key sentences
+    sentences = re.split(r'(?<=[.!?])\s+', content)
+    
+    # Use a simple algorithm to score sentences
+    scores = []
+    for sentence in sentences:
+        # Score based on length (not too short or too long)
+        length_score = min(len(sentence) / 20, 1.0) if len(sentence) < 200 else 200 / len(sentence)
+        
+        # Score based on position (earlier is often more important)
+        position_score = 1.0 - (sentences.index(sentence) / len(sentences))
+        
+        # Score based on title words (sentences containing title words are important)
+        title_words = set(re.findall(r'\w+', title.lower()))
+        sentence_words = set(re.findall(r'\w+', sentence.lower()))
+        title_score = len(title_words.intersection(sentence_words)) / max(len(title_words), 1)
+        
+        # Combined score
+        scores.append(0.4 * length_score + 0.3 * position_score + 0.3 * title_score)
+    
+    # Get top sentences
+    top_sentences = [s for _, s in sorted(zip(scores, sentences), reverse=True)]
+    
+    # Take top sentences until we reach the max length
+    summary = []
+    current_length = 0
+    for sentence in top_sentences:
+        if current_length + len(sentence) <= max_length:
+            summary.append(sentence)
+            current_length += len(sentence)
+        else:
+            break
+    
+    # Sort back into original order
+    summary = [s for s in sentences if s in summary]
+    
+    return ' '.join(summary)
+
+def display_news(symbol):
+    """
+    Display news articles for a stock symbol in the Streamlit app
+    
+    Args:
+        symbol (str): Stock symbol to display news for
+    """
+    with st.spinner(f"Loading news for {symbol}..."):
+        news = get_stock_news(symbol)
+        
+        if not news:
+            st.warning(f"No recent news found for {symbol}")
+            return
+        
+        st.subheader(f"📰 Latest News for {symbol}")
+        
+        for i, article in enumerate(news):
+            with st.expander(f"{article['title']} - {article['publisher']} ({article['date']})"):
+                # Show a "Generate Summary" button
+                if st.button(f"📝 Generate Summary", key=f"summary_{i}_{symbol}"):
+                    with st.spinner("Generating summary..."):
+                        # Extract full article content
+                        content = extract_article_content(article['link'])
+                        
+                        # Summarize the content
+                        summary = summarize_article(content, article['title'])
+                        
+                        # Display the summary
+                        st.markdown("### Quick Summary")
+                        st.markdown(summary)
+                        
+                        # Show source link
+                        st.markdown(f"[Read full article]({article['link']})")
+                else:
+                    # Show the short summary from Yahoo Finance
+                    st.markdown(article['summary'])
+                    
+                    # Show source link
+                    st.markdown(f"[Read full article]({article['link']})")
+        
+        st.markdown("---")

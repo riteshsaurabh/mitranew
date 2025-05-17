@@ -8,6 +8,7 @@ import utils
 import financial_metrics
 import simple_watchlist
 import indian_markets
+import stock_news
 
 # Page configuration
 st.set_page_config(
@@ -106,6 +107,7 @@ if data_loaded:
         "💰 Financial Statements", 
         "📈 Performance Analysis",
         "📋 Research Report",
+        "📰 Latest News",
         "⭐ Watchlists"
     ])
     
@@ -595,8 +597,14 @@ if data_loaded:
             st.write("- Economic slowdown")
             st.write("- Supply chain disruptions")
             
-    # Watchlists Tab
+    # Latest News Tab
     with main_tabs[5]:
+        st.header("Latest Financial News")
+        # Display one-click news summary for the selected stock
+        stock_news.display_news(stock_symbol)
+    
+    # Watchlists Tab
+    with main_tabs[6]:
         # Display watchlist section using the simplified implementation
         simple_watchlist.render_watchlist_section(stock_symbol)
     
