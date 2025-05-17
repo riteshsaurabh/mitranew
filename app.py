@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import utils
 import financial_metrics
 import simple_watchlist
+import indian_markets
 
 # Page configuration
 st.set_page_config(
@@ -20,8 +21,8 @@ if 'selected_stock' not in st.session_state:
     st.session_state['selected_stock'] = None
 
 # Title and description
-st.title("Comprehensive Stock Analysis Dashboard")
-st.write("Enter a stock symbol to get detailed financial analysis and visualization")
+st.title("Indian Stock Market Analysis Dashboard")
+st.write("Enter an Indian stock symbol (e.g., RELIANCE.NS, TATAMOTORS.NS, INFY.NS) to get detailed financial analysis in Rupees")
 
 # Dashboard header with stock market image
 col1, col2 = st.columns([1, 3])
@@ -39,11 +40,11 @@ with col2:
     
     with col_symbol:
         # Check if a stock was selected from the watchlist
-        initial_value = st.session_state.get('selected_stock', 'AAPL')
-        # Make sure initial_value is not None
+        initial_value = st.session_state.get('selected_stock', 'RELIANCE.NS')
+        # Make sure initial_value is not None 
         if initial_value is None:
-            initial_value = 'AAPL'
-        stock_symbol = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, GOOGL)", initial_value).upper()
+            initial_value = 'RELIANCE.NS'
+        stock_symbol = st.text_input("Enter Stock Symbol (e.g., RELIANCE.NS, TATAMOTORS.NS, INFY.NS)", initial_value).upper()
         # Reset the selected stock after use
         if st.session_state.get('selected_stock'):
             st.session_state['selected_stock'] = None
@@ -57,14 +58,33 @@ with col2:
 # Load data with status indicator
 with st.spinner(f"Loading data for {stock_symbol}..."):
     try:
-        # Get stock data
-        stock_data = utils.get_stock_data(stock_symbol, time_period)
+        # Check if it's an Indian stock
+        is_indian = indian_markets.is_indian_symbol(stock_symbol) or '.NS' in stock_symbol or '.BO' in stock_symbol
         
-        # Get company info
-        company_info = utils.get_company_info(stock_symbol)
-        
-        # Get financial metrics
-        financial_data = financial_metrics.get_financial_metrics(stock_symbol)
+        if is_indian:
+            # Get Indian stock data
+            stock_data = indian_markets.get_indian_stock_data(stock_symbol, time_period)
+            
+            # Get Indian company info
+            company_info = indian_markets.get_indian_company_info(stock_symbol)
+            
+            # Get financial metrics (using standard financial_metrics for now)
+            financial_data = financial_metrics.get_financial_metrics(stock_symbol)
+            
+            # Set flag for Indian stock
+            is_indian_stock = True
+        else:
+            # Get regular stock data
+            stock_data = utils.get_stock_data(stock_symbol, time_period)
+            
+            # Get company info
+            company_info = utils.get_company_info(stock_symbol)
+            
+            # Get financial metrics
+            financial_data = financial_metrics.get_financial_metrics(stock_symbol)
+            
+            # Set flag for non-Indian stock
+            is_indian_stock = False
         
         # Basic validation
         if stock_data.empty:

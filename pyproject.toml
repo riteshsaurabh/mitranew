@@ -4,11 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "nsetools>=2.0.1",
     "numpy>=2.2.5",
+    "pandas-datareader>=0.10.0",
     "pandas>=2.2.3",
     "plotly>=6.1.0",
     "psycopg2-binary>=2.9.10",
     "sqlalchemy>=2.0.41",
     "streamlit>=1.45.1",
+    "trafilatura>=2.0.0",
     "yfinance>=0.2.61",
 ]
