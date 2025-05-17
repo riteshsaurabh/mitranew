@@ -179,13 +179,24 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     upper_ci = prediction_data["upper_ci"]
     model_name = prediction_data["model"]
     
+    # Convert dates to strings to avoid timestamp arithmetic issues
+    if isinstance(hist_dates, pd.DatetimeIndex):
+        hist_dates_str = hist_dates.strftime('%Y-%m-%d').tolist()
+    else:
+        hist_dates_str = [str(d) for d in hist_dates]
+        
+    if isinstance(forecast_dates, pd.DatetimeIndex):
+        forecast_dates_str = forecast_dates.strftime('%Y-%m-%d').tolist()
+    else:
+        forecast_dates_str = [str(d) for d in forecast_dates]
+    
     # Create figure
     fig = go.Figure()
     
     # Add historical price line
     fig.add_trace(
         go.Scatter(
-            x=hist_dates,
+            x=hist_dates_str,
             y=hist_prices,
             mode='lines',
             name='Historical Price',
@@ -196,7 +207,7 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     # Add forecast line
     fig.add_trace(
         go.Scatter(
-            x=forecast_dates,
+            x=forecast_dates_str,
             y=forecast_mean,
             mode='lines',
             name='Price Forecast',
@@ -205,10 +216,14 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     )
     
     # Add confidence interval as a shaded area
+    # Create x and y values for confidence interval
+    ci_x = forecast_dates_str + forecast_dates_str[::-1]
+    ci_y = upper_ci.tolist() + lower_ci.tolist()[::-1]
+    
     fig.add_trace(
         go.Scatter(
-            x=forecast_dates.tolist() + forecast_dates.tolist()[::-1],
-            y=upper_ci.tolist() + lower_ci.tolist()[::-1],
+            x=ci_x,
+            y=ci_y,
             fill='toself',
             fillcolor='rgba(231,107,243,0.2)',
             line=dict(color='rgba(255,255,255,0)'),
@@ -218,7 +233,7 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     )
     
     # Add vertical line separating historical data and forecast
-    last_date = hist_dates[-1]
+    last_date = hist_dates_str[-1]
     
     fig.add_vline(
         x=last_date, 
@@ -261,13 +276,23 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     frames = []
     
     # Total number of days to animate
-    n_forecast_days = len(forecast_dates)
+    n_forecast_days = len(forecast_dates_str)
     
     for i in range(1, n_forecast_days + 1):
+        # Use string dates to avoid timestamp arithmetic
+        frame_forecast_dates = forecast_dates_str[:i]
+        frame_mean_forecast = forecast_mean[:i]
+        frame_lower_ci = lower_ci[:i].tolist()
+        frame_upper_ci = upper_ci[:i].tolist()
+        
+        # Create x and y values for confidence interval
+        frame_ci_x = frame_forecast_dates + frame_forecast_dates[::-1]
+        frame_ci_y = frame_upper_ci + frame_lower_ci[::-1]
+        
         frame_data = [
             # Historical line (unchanged)
             go.Scatter(
-                x=hist_dates,
+                x=hist_dates_str,
                 y=hist_prices,
                 mode='lines',
                 name='Historical Price',
@@ -275,16 +300,16 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
             ),
             # Forecast line (growing)
             go.Scatter(
-                x=forecast_dates[:i],
-                y=forecast_mean[:i],
+                x=frame_forecast_dates,
+                y=frame_mean_forecast,
                 mode='lines',
                 name='Price Forecast',
                 line=dict(color='firebrick', width=2, dash='dash')
             ),
-            # Confidence interval (growing) - using string dates to avoid timestamp arithmetic
+            # Confidence interval (growing)
             go.Scatter(
-                x=list(forecast_dates[:i].strftime('%Y-%m-%d')) + list(forecast_dates[:i].strftime('%Y-%m-%d'))[::-1],
-                y=upper_ci[:i].tolist() + lower_ci[:i].tolist()[::-1],
+                x=frame_ci_x,
+                y=frame_ci_y,
                 fill='toself',
                 fillcolor='rgba(231,107,243,0.2)',
                 line=dict(color='rgba(255,255,255,0)'),
