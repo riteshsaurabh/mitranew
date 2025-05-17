@@ -32,20 +32,29 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
         # Extract the closing prices
         close_prices = hist_data['Close'].values
         
-        # Generate date range for forecast period
-        last_date = hist_data.index[-1]
-        forecast_dates = pd.date_range(start=last_date + timedelta(days=1), periods=forecast_days)
+        # Convert dates to numbers for prediction calculations to avoid timestamp arithmetic errors
+        date_indices = np.arange(len(hist_data))
+        forecast_indices = np.arange(len(hist_data), len(hist_data) + forecast_days)
+        
+        # For display purposes only, create business day date labels
+        if isinstance(hist_data.index, pd.DatetimeIndex):
+            last_date = hist_data.index[-1]
+            # Create dates for display, using business day frequency
+            forecast_dates = pd.date_range(start=last_date, periods=forecast_days + 1, freq='B')[1:]
+        else:
+            # If index is not datetime, create a simple numeric forecast
+            forecast_dates = pd.date_range(start=pd.Timestamp.now(), periods=forecast_days, freq='B')
         
         if model_type == "linear":
-            # Simple linear regression model
-            X = np.arange(len(close_prices)).reshape(-1, 1)
+            # Simple linear regression model using integer indices instead of timestamps
+            X = date_indices.reshape(-1, 1)
             y = close_prices
             
             model = LinearRegression()
             model.fit(X, y)
             
-            # Generate forecast
-            X_forecast = np.arange(len(close_prices), len(close_prices) + forecast_days).reshape(-1, 1)
+            # Generate forecast using integer indices
+            X_forecast = forecast_indices.reshape(-1, 1)
             forecast_mean = model.predict(X_forecast)
             
             # Calculate standard error to create confidence intervals
@@ -61,13 +70,14 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
         
         elif model_type == "arima":
             try:
-                # Try to fit ARIMA model
-                from statsmodels.tsa.arima.model import ARIMA
-                model = ARIMA(close_prices, order=(2, 1, 0))
+                # Try to fit ARIMA model using integer indices
+                # Use simpler model to avoid timestamp issues
+                from statsmodels.tsa.ar_model import AutoReg
+                model = AutoReg(close_prices, lags=3)
                 model_fit = model.fit()
                 
-                # Generate forecast
-                forecast_mean = model_fit.forecast(steps=forecast_days)
+                # Generate forecast using predict method
+                forecast_mean = model_fit.predict(start=len(close_prices), end=len(close_prices) + forecast_days - 1)
                 
                 # Simple confidence interval based on volatility
                 std_dev = np.std(close_prices)
@@ -77,15 +87,14 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
                 lower_ci = forecast_mean - 1.96 * std_dev * factor
                 upper_ci = forecast_mean + 1.96 * std_dev * factor
                 
-                model_name = "ARIMA(2,1,0)"
-            except:
-                # Fallback to polynomial if ARIMA fails
-                x = np.arange(len(close_prices))
+                model_name = "AutoRegressive(3)"
+            except Exception as e:
+                # Fallback to polynomial if AR fails
+                x = date_indices
                 poly_coefs = np.polyfit(x, close_prices, 2)
                 
-                # Generate forecast
-                x_forecast = np.arange(len(close_prices), len(close_prices) + forecast_days)
-                forecast_mean = np.polyval(poly_coefs, x_forecast)
+                # Generate forecast using integer indices
+                forecast_mean = np.polyval(poly_coefs, forecast_indices)
                 
                 # Confidence intervals
                 std_dev = np.std(close_prices)
@@ -95,7 +104,7 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
                 model_name = "Polynomial Trend"
                 
         else:  # Default to exponential smoothing
-            # Simple exponential smoothing
+            # Simple exponential smoothing - using integer indices
             alpha = 0.3  # Smoothing factor
             
             # Initialize with starting point
@@ -108,7 +117,7 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
             
             # Calculate standard error for confidence intervals
             std_dev = np.std(close_prices)
-            factor = np.sqrt(np.arange(1, forecast_days + 1)) * 0.5
+            factor = np.sqrt(np.arange(1, forecast_days + 1)) * 0.4  # Lower factor for tighter bounds
             
             # 95% confidence interval
             lower_ci = forecast_mean - 1.96 * std_dev * factor
@@ -272,9 +281,9 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
                 name='Price Forecast',
                 line=dict(color='firebrick', width=2, dash='dash')
             ),
-            # Confidence interval (growing)
+            # Confidence interval (growing) - using string dates to avoid timestamp arithmetic
             go.Scatter(
-                x=forecast_dates[:i].tolist() + forecast_dates[:i].tolist()[::-1],
+                x=list(forecast_dates[:i].strftime('%Y-%m-%d')) + list(forecast_dates[:i].strftime('%Y-%m-%d'))[::-1],
                 y=upper_ci[:i].tolist() + lower_ci[:i].tolist()[::-1],
                 fill='toself',
                 fillcolor='rgba(231,107,243,0.2)',
