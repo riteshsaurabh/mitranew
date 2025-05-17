@@ -60,8 +60,8 @@ if 'selected_stock' not in st.session_state:
     st.session_state['selected_stock'] = None
 
 # Title and description
-st.title("Indian Stock Market Analysis Dashboard")
-st.write("Enter an Indian stock symbol (e.g., RELIANCE.NS, TATAMOTORS.NS, INFY.NS) to get detailed financial analysis in Rupees")
+st.title("MoneyMitra - Your Financial Mitra")
+st.write("Your Financial Mitra that brings all the relevant detailed financial analysis data in one place for you to make your investment decisions easy, quick but well informed")
 
 # Dashboard header with stock market image
 col1, col2 = st.columns([1, 3])
