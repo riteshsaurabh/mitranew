@@ -216,9 +216,9 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     )
     
     # Add confidence interval as a shaded area
-    # Create x and y values for confidence interval
-    ci_x = forecast_dates_str + forecast_dates_str[::-1]
-    ci_y = upper_ci.tolist() + lower_ci.tolist()[::-1]
+    # Create x and y values for confidence interval - ensure all are lists
+    ci_x = list(forecast_dates_str) + list(forecast_dates_str)[::-1]
+    ci_y = list(upper_ci.tolist()) + list(lower_ci.tolist())[::-1]
     
     fig.add_trace(
         go.Scatter(
@@ -285,9 +285,9 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
         frame_lower_ci = lower_ci[:i].tolist()
         frame_upper_ci = upper_ci[:i].tolist()
         
-        # Create x and y values for confidence interval
-        frame_ci_x = frame_forecast_dates + frame_forecast_dates[::-1]
-        frame_ci_y = frame_upper_ci + frame_lower_ci[::-1]
+        # Create x and y values for confidence interval - ensure all are lists
+        frame_ci_x = list(frame_forecast_dates) + list(frame_forecast_dates)[::-1]
+        frame_ci_y = list(frame_upper_ci) + list(frame_lower_ci)[::-1]
         
         frame_data = [
             # Historical line (unchanged)
