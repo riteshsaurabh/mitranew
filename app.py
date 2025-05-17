@@ -40,6 +40,9 @@ with col2:
     with col_symbol:
         # Check if a stock was selected from the watchlist
         initial_value = st.session_state.get('selected_stock', 'AAPL')
+        # Make sure initial_value is not None
+        if initial_value is None:
+            initial_value = 'AAPL'
         stock_symbol = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, GOOGL)", initial_value).upper()
         # Reset the selected stock after use
         if st.session_state.get('selected_stock'):
