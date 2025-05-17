@@ -66,12 +66,13 @@ def format_large_number(num):
     else:
         return f"${abs_num:.2f}"
 
-def create_line_chart(data):
+def create_line_chart(data, currency="$"):
     """
     Create a line chart for stock prices
     
     Args:
         data (pandas.DataFrame): Stock price data
+        currency (str): Currency symbol to display (default: $)
     
     Returns:
         plotly.graph_objects.Figure: Line chart figure
@@ -86,7 +87,7 @@ def create_line_chart(data):
             mode='lines',
             name='Close Price',
             line=dict(color='#2C6E49', width=2),
-            hovertemplate='Date: %{x}<br>Price: $%{y:.2f}<extra></extra>'
+            hovertemplate=f'Date: %{{x}}<br>Price: {currency}%{{y:.2f}}<extra></extra>'
         )
     )
     
@@ -104,15 +105,20 @@ def create_line_chart(data):
                     mode='lines',
                     name=f'{period}-day MA',
                     line=dict(color=color, width=1.5, dash='dot'),
-                    hovertemplate=f'{period}-day MA: $%{{y:.2f}}<extra></extra>'
+                    hovertemplate=f'{period}-day MA: {currency}%{{y:.2f}}<extra></extra>'
                 )
             )
+    
+    # Determine currency name for title
+    currency_name = "USD"
+    if currency == "₹":
+        currency_name = "INR"
     
     # Update layout
     fig.update_layout(
         title=f"Stock Price History",
         xaxis_title="Date",
-        yaxis_title="Price (USD)",
+        yaxis_title=f"Price ({currency_name})",
         hovermode="x unified",
         legend=dict(
             orientation="h",

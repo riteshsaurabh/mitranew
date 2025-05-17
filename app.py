@@ -125,15 +125,37 @@ if data_loaded:
             # Metrics row
             metrics_row = st.columns(4)
             with metrics_row[0]:
-                st.metric("Current Price", f"${stock_data['Close'].iloc[-1]:.2f}", 
-                        f"{((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100:.2f}%")
+                if is_indian_stock:
+                    # For Indian stocks, show price in Rupees
+                    price_value = stock_data['Close'].iloc[-1]
+                    price_change = ((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100
+                    st.metric("Current Price", f"₹{price_value:.2f}", f"{price_change:.2f}%")
+                else:
+                    st.metric("Current Price", f"${stock_data['Close'].iloc[-1]:.2f}", 
+                            f"{((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100:.2f}%")
             with metrics_row[1]:
-                st.metric("Market Cap", utils.format_large_number(company_info.get('marketCap', 'N/A')))
+                if is_indian_stock:
+                    # Format market cap in Indian style (Cr, L)
+                    market_cap = company_info.get('marketCap')
+                    if market_cap is not None:
+                        st.metric("Market Cap", indian_markets.format_inr(market_cap))
+                    else:
+                        st.metric("Market Cap", "N/A")
+                else:
+                    st.metric("Market Cap", utils.format_large_number(company_info.get('marketCap', 'N/A')))
             with metrics_row[2]:
                 pe_ratio = company_info.get('trailingPE')
                 st.metric("P/E Ratio", f"{pe_ratio:.2f}" if isinstance(pe_ratio, (int, float)) else "N/A")
             with metrics_row[3]:
-                st.metric("52W Range", f"${company_info.get('fiftyTwoWeekLow', 'N/A'):.2f} - ${company_info.get('fiftyTwoWeekHigh', 'N/A'):.2f}" if all(isinstance(company_info.get(x), (int, float)) for x in ['fiftyTwoWeekLow', 'fiftyTwoWeekHigh']) else "N/A")
+                if is_indian_stock:
+                    low = company_info.get('fiftyTwoWeekLow')
+                    high = company_info.get('fiftyTwoWeekHigh')
+                    if all(isinstance(val, (int, float)) for val in [low, high]):
+                        st.metric("52W Range", f"₹{low:.2f} - ₹{high:.2f}")
+                    else:
+                        st.metric("52W Range", "N/A")
+                else:
+                    st.metric("52W Range", f"${company_info.get('fiftyTwoWeekLow', 'N/A'):.2f} - ${company_info.get('fiftyTwoWeekHigh', 'N/A'):.2f}" if all(isinstance(company_info.get(x), (int, float)) for x in ['fiftyTwoWeekLow', 'fiftyTwoWeekHigh']) else "N/A")
         
         with overview_col2:
             st.image("https://pixabay.com/get/g87690ed3ce15cbccbebd694d12edf27c88cc096992c61c05e3d858515dbb583c5f8adf1645f81df6bdd0f6982a4a408fdb2f409ed8cc38f390680a33e567f751_1280.jpg", 
@@ -145,8 +167,21 @@ if data_loaded:
             
             st.write(f"**Sector:** {sector}")
             st.write(f"**Industry:** {industry}")
-            st.write(f"**Exchange:** {company_info.get('exchange', 'N/A')}")
-            st.write(f"**Currency:** {company_info.get('currency', 'N/A')}")
+            
+            if is_indian_stock:
+                # Show NSE/BSE specific information
+                exchange = "NSE" if ".NS" in stock_symbol else "BSE" if ".BO" in stock_symbol else company_info.get('exchange', 'N/A')
+                st.write(f"**Exchange:** {exchange}")
+                st.write(f"**Currency:** INR (₹)")
+                
+                # Add additional Indian stock information if available
+                if 'nse_totalTradedVolume' in company_info:
+                    st.write(f"**Trading Volume:** {company_info['nse_totalTradedVolume']:,}")
+                if 'nse_pChange' in company_info:
+                    st.write(f"**% Change:** {company_info['nse_pChange']}%")
+            else:
+                st.write(f"**Exchange:** {company_info.get('exchange', 'N/A')}")
+                st.write(f"**Currency:** {company_info.get('currency', 'N/A')}")
             
             if website != 'N/A':
                 st.write(f"**Website:** [{website}]({website})")
@@ -157,16 +192,126 @@ if data_loaded:
         chart_tabs = st.tabs(["Line Chart", "Candlestick Chart", "Volume Analysis"])
         
         with chart_tabs[0]:
-            fig = utils.create_line_chart(stock_data)
+            if is_indian_stock:
+                # Use INR currency for Indian stocks
+                fig = utils.create_line_chart(stock_data, currency="₹")
+            else:
+                fig = utils.create_line_chart(stock_data)
             st.plotly_chart(fig, use_container_width=True)
         
         with chart_tabs[1]:
-            fig = utils.create_candlestick_chart(stock_data)
+            if is_indian_stock:
+                # Use INR currency for Indian stocks
+                fig = utils.create_candlestick_chart(stock_data, currency="₹")
+            else:
+                fig = utils.create_candlestick_chart(stock_data)
             st.plotly_chart(fig, use_container_width=True)
         
         with chart_tabs[2]:
             fig = utils.create_volume_chart(stock_data)
             st.plotly_chart(fig, use_container_width=True)
+            
+        # Add Indian market benchmark comparison if it's an Indian stock
+        if is_indian_stock:
+            st.subheader("Benchmark Comparison")
+            
+            benchmark_tabs = st.tabs(["NIFTY 50", "SENSEX"])
+            
+            with benchmark_tabs[0]:
+                with st.spinner("Loading NIFTY 50 data..."):
+                    try:
+                        nifty_data = indian_markets.get_nifty_index_data(time_period)
+                        if not nifty_data.empty:
+                            # Create a comparison chart
+                            fig = go.Figure()
+                            
+                            # Normalize data for comparison (start at 100)
+                            stock_normalized = stock_data['Close'] / stock_data['Close'].iloc[0] * 100
+                            nifty_normalized = nifty_data['Close'] / nifty_data['Close'].iloc[0] * 100
+                            
+                            # Add stock line
+                            fig.add_trace(go.Scatter(
+                                x=stock_data.index,
+                                y=stock_normalized,
+                                name=stock_symbol,
+                                line=dict(color='royalblue')
+                            ))
+                            
+                            # Add NIFTY line
+                            fig.add_trace(go.Scatter(
+                                x=nifty_data.index,
+                                y=nifty_normalized,
+                                name="NIFTY 50",
+                                line=dict(color='firebrick')
+                            ))
+                            
+                            fig.update_layout(
+                                title=f"{stock_symbol} vs NIFTY 50 (Normalized to 100)",
+                                xaxis_title="Date",
+                                yaxis_title="Normalized Value",
+                                legend_title="Comparison",
+                                height=500
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Performance comparison
+                            stock_perf = ((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100
+                            nifty_perf = ((nifty_data['Close'].iloc[-1] / nifty_data['Close'].iloc[0]) - 1) * 100
+                            
+                            st.write(f"**{stock_symbol} Performance:** {stock_perf:.2f}%")
+                            st.write(f"**NIFTY 50 Performance:** {nifty_perf:.2f}%")
+                            st.write(f"**Difference:** {stock_perf - nifty_perf:.2f}%")
+                    except Exception as e:
+                        st.error(f"Failed to load NIFTY data: {str(e)}")
+            
+            with benchmark_tabs[1]:
+                with st.spinner("Loading SENSEX data..."):
+                    try:
+                        sensex_data = indian_markets.get_sensex_index_data(time_period)
+                        if not sensex_data.empty:
+                            # Create a comparison chart
+                            fig = go.Figure()
+                            
+                            # Normalize data for comparison (start at 100)
+                            stock_normalized = stock_data['Close'] / stock_data['Close'].iloc[0] * 100
+                            sensex_normalized = sensex_data['Close'] / sensex_data['Close'].iloc[0] * 100
+                            
+                            # Add stock line
+                            fig.add_trace(go.Scatter(
+                                x=stock_data.index,
+                                y=stock_normalized,
+                                name=stock_symbol,
+                                line=dict(color='royalblue')
+                            ))
+                            
+                            # Add SENSEX line
+                            fig.add_trace(go.Scatter(
+                                x=sensex_data.index,
+                                y=sensex_normalized,
+                                name="SENSEX",
+                                line=dict(color='firebrick')
+                            ))
+                            
+                            fig.update_layout(
+                                title=f"{stock_symbol} vs SENSEX (Normalized to 100)",
+                                xaxis_title="Date",
+                                yaxis_title="Normalized Value",
+                                legend_title="Comparison",
+                                height=500
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Performance comparison
+                            stock_perf = ((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100
+                            sensex_perf = ((sensex_data['Close'].iloc[-1] / sensex_data['Close'].iloc[0]) - 1) * 100
+                            
+                            st.write(f"**{stock_symbol} Performance:** {stock_perf:.2f}%")
+                            st.write(f"**SENSEX Performance:** {sensex_perf:.2f}%")
+                            st.write(f"**Difference:** {stock_perf - sensex_perf:.2f}%")
+                    except Exception as e:
+                        st.error(f"Failed to load SENSEX data: {str(e)}")
     
     # Detailed Analysis Tab
     with main_tabs[1]:
