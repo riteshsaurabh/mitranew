@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import utils
 import financial_metrics
-import watchlist
+import simple_watchlist
 
 # Page configuration
 st.set_page_config(
@@ -429,40 +429,8 @@ if data_loaded:
             
     # Watchlists Tab
     with main_tabs[5]:
-        st.header("Stock Watchlists")
-        
-        # Add button to save current stock to watchlist
-        st.subheader(f"Save {stock_symbol} to Watchlist")
-        
-        user = watchlist.get_user()
-        user_watchlists = watchlist.get_user_watchlists(user.id)
-        
-        if user_watchlists:
-            selected_watchlist = st.selectbox(
-                "Select a watchlist to add this stock to:",
-                options=[wl.name for wl in user_watchlists],
-                key="select_watchlist_for_add"
-            )
-            
-            # Get the selected watchlist ID
-            selected_watchlist_id = None
-            for wl in user_watchlists:
-                if wl.name == selected_watchlist:
-                    selected_watchlist_id = wl.id
-                    break
-            
-            if selected_watchlist_id and st.button(f"Add {stock_symbol} to {selected_watchlist}"):
-                success = watchlist.add_to_watchlist(selected_watchlist_id, stock_symbol)
-                if success:
-                    st.success(f"Added {stock_symbol} to {selected_watchlist}")
-                else:
-                    st.error(f"Failed to add {stock_symbol} to watchlist")
-        
-        # Add horizontal divider
-        st.markdown("---")
-        
-        # Display all watchlists and their stocks
-        watchlist.render_watchlist_ui()
+        # Display watchlist section using the simplified implementation
+        simple_watchlist.render_watchlist_section(stock_symbol)
     
     # Download section
     st.header("Export Data")

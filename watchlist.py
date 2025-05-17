@@ -134,27 +134,31 @@ def render_watchlist_ui():
         if not watchlists:
             st.info("You don't have any watchlists yet. Create one to get started!")
         else:
-            # Create tabs for each watchlist
-            watchlist_tabs = st.tabs([watchlist.name for watchlist in watchlists])
+            # Create tabs for each watchlist using a list of strings
+            watchlist_names = []
+            for wl in watchlists:
+                # Extract the name as a regular Python string 
+                watchlist_names.append(str(wl.name) if wl.name else f"Watchlist {wl.id}")
+            watchlist_tabs = st.tabs(watchlist_names)
             
-            for i, watchlist in enumerate(watchlists):
+            for i, wl in enumerate(watchlists):
                 with watchlist_tabs[i]:
                     # Watchlist description
-                    if watchlist.description:
-                        st.write(watchlist.description)
+                    if wl.description:
+                        st.write(wl.description)
                     
                     # Add stock to watchlist
                     new_stock = st.text_input(
                         "Add Stock Symbol", 
-                        key=f"add_stock_{watchlist.id}",
+                        key=f"add_stock_{wl.id}",
                         placeholder="Enter stock symbol (e.g., AAPL)"
                     )
                     
                     col1, col2 = st.columns([3, 1])
                     with col1:
-                        if st.button("Add to Watchlist", key=f"add_btn_{watchlist.id}"):
+                        if st.button("Add to Watchlist", key=f"add_btn_{wl.id}"):
                             if new_stock:
-                                if add_to_watchlist(watchlist.id, new_stock):
+                                if add_to_watchlist(wl.id, new_stock):
                                     st.success(f"Added {new_stock.upper()} to watchlist!")
                                     st.rerun()
                                 else:
@@ -163,15 +167,15 @@ def render_watchlist_ui():
                                 st.error("Please enter a stock symbol")
                     
                     with col2:
-                        if st.button("Delete Watchlist", key=f"del_watchlist_{watchlist.id}"):
-                            if delete_watchlist(watchlist.id):
-                                st.success(f"Deleted watchlist '{watchlist.name}'")
+                        if st.button("Delete Watchlist", key=f"del_watchlist_{wl.id}"):
+                            if delete_watchlist(wl.id):
+                                st.success(f"Deleted watchlist '{wl.name}'")
                                 st.rerun()
                             else:
                                 st.error("Failed to delete watchlist")
                     
                     # Display stocks in watchlist
-                    stocks = get_watchlist_stocks(watchlist.id)
+                    stocks = get_watchlist_stocks(wl.id)
                     
                     if not stocks:
                         st.info("This watchlist is empty. Add some stocks to get started!")
@@ -180,13 +184,13 @@ def render_watchlist_ui():
                         stock_data = []
                         for stock in stocks:
                             # Add button for viewing stock
-                            view_btn = st.button("View", key=f"view_{watchlist.id}_{stock.id}")
+                            view_btn = st.button("View", key=f"view_{wl.id}_{stock.id}")
                             
                             # Add button for removing stock
-                            remove_btn = st.button("Remove", key=f"remove_{watchlist.id}_{stock.id}")
+                            remove_btn = st.button("Remove", key=f"remove_{wl.id}_{stock.id}")
                             
                             if remove_btn:
-                                if remove_from_watchlist(watchlist.id, stock.id):
+                                if remove_from_watchlist(wl.id, stock.id):
                                     st.success(f"Removed {stock.symbol} from watchlist")
                                     st.rerun()
                                 else:
@@ -197,14 +201,16 @@ def render_watchlist_ui():
                                 st.session_state["selected_stock"] = stock.symbol
                                 st.rerun()
                             
+                            added_at = session.query(WatchlistStock).filter_by(
+                                watchlist_id=wl.id, 
+                                stock_id=stock.id
+                            ).first().added_at
+                            
                             stock_data.append({
                                 "Symbol": stock.symbol,
                                 "Company": stock.company_name,
-                                "Sector": stock.sector or "N/A",
-                                "Added": WatchlistStock.query.filter_by(
-                                    watchlist_id=watchlist.id, 
-                                    stock_id=stock.id
-                                ).first().added_at.strftime("%Y-%m-%d")
+                                "Sector": stock.sector if stock.sector else "N/A",
+                                "Added": added_at.strftime("%Y-%m-%d") if added_at else "N/A"
                             })
                         
                         # Display stock data as a table
