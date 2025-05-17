@@ -502,76 +502,36 @@ if data_loaded:
         if sector != 'N/A':
             st.write(f"Comparison with other companies in the {sector} sector:")
             
-            # Get appropriate peer companies based on sector
-            peer_symbols = get_peer_symbols(stock_symbol, sector, is_indian_stock)
-            
-            # Generate column for company names with their symbols
-            companies = [f"{company_info.get('shortName', stock_symbol)} ({stock_symbol})"]
-            pe_ratios = [company_info.get('trailingPE', 'N/A')]
-            market_caps = [company_info.get('marketCap', 0) / 1_000_000_000]
-            dividend_yields = [company_info.get('dividendYield', 0) * 100 if company_info.get('dividendYield') is not None else 'N/A']
-            returns = [ytd_performance]
-            
-            # Add industry average at the end
-            peer_symbols.append("Industry Average")
-            
-            # Map of representative company data - with all values in Indian Rupees (₹)
-            sector_data = {
-                "Technology": {
-                    "INFY.NS": {"name": "Infosys", "pe": 23.4, "mcap": 7405, "div": 2.7, "returns": 13.5},
-                    "TECHM.NS": {"name": "Tech Mahindra", "pe": 22.8, "mcap": 1125, "div": 2.0, "returns": 9.8},
-                    "WIPRO.NS": {"name": "Wipro", "pe": 18.9, "mcap": 3428, "div": 1.9, "returns": 7.8},
-                    "HCLTECH.NS": {"name": "HCL Technologies", "pe": 17.5, "mcap": 3212, "div": 3.1, "returns": 9.5},
-                    "Industry Average": {"name": "Industry Average", "pe": 21.2, "mcap": 3793, "div": 2.5, "returns": 10.2}
-                },
-                "Financial Services": {
-                    "HDFCBANK.NS": {"name": "HDFC Bank", "pe": 18.6, "mcap": 10026, "div": 1.8, "returns": 8.5},
-                    "ICICIBANK.NS": {"name": "ICICI Bank", "pe": 16.9, "mcap": 8167, "div": 1.5, "returns": 14.2},
-                    "SBIN.NS": {"name": "State Bank of India", "pe": 12.3, "mcap": 7063, "div": 2.1, "returns": 16.7},
-                    "AXISBANK.NS": {"name": "Axis Bank", "pe": 15.7, "mcap": 5585, "div": 1.7, "returns": 12.1},
-                    "Industry Average": {"name": "Industry Average", "pe": 15.9, "mcap": 7710, "div": 1.8, "returns": 12.9}
-                },
-                "Consumer Cyclical": {
-                    "TATAMOTORS.NS": {"name": "Tata Motors", "pe": 14.5, "mcap": 2125, "div": 0.9, "returns": 19.7},
-                    "M&M.NS": {"name": "Mahindra & Mahindra", "pe": 16.2, "mcap": 1643, "div": 1.2, "returns": 21.3},
-                    "MARUTI.NS": {"name": "Maruti Suzuki", "pe": 28.4, "mcap": 2614, "div": 0.8, "returns": 11.6},
-                    "HEROMOTOCO.NS": {"name": "Hero MotoCorp", "pe": 15.9, "mcap": 1054, "div": 2.4, "returns": 8.3},
-                    "Industry Average": {"name": "Industry Average", "pe": 18.7, "mcap": 1859, "div": 1.3, "returns": 15.2}
-                }
-            }
-            
-            # Get default sector if not in our map
-            default_sector = "Technology"
-            if sector not in sector_data:
-                sector_to_use = default_sector
-            else:
-                sector_to_use = sector
+            try:
+                # Import peer comparison module for real-time data
+                import peer_comparison
                 
-            # Add peer data
-            for peer in peer_symbols:
-                if peer == stock_symbol:
-                    continue  # Skip the current stock
+                # Show a loading spinner while fetching real-time comparison data
+                with st.spinner("Fetching real-time peer comparison data..."):
+                    # Get real sector peers based on the company's sector
+                    peer_symbols = peer_comparison.get_sector_peers(stock_symbol, sector)
                     
-                if peer in sector_data[sector_to_use]:
-                    peer_info = sector_data[sector_to_use][peer]
-                    companies.append(f"{peer_info['name']} ({peer})")
-                    pe_ratios.append(peer_info['pe'])
-                    market_caps.append(peer_info['mcap'])
-                    dividend_yields.append(peer_info['div'])
-                    returns.append(peer_info['returns'])
+                    # Get real-time financial data for the peer comparison
+                    peers_df = peer_comparison.get_peer_data(stock_symbol, peer_symbols, is_indian_stock)
+                    
+                    # Display the peer comparison data
+                    st.dataframe(peers_df)
+                    
+                    # Add explanation of the metrics
+                    with st.expander("About these metrics"):
+                        st.markdown("""
+                        **P/E Ratio**: Price-to-Earnings ratio, a valuation metric that compares a company's stock price to its earnings per share.
+                        
+                        **Market Cap (₹ Cr)**: Total market value of a company's outstanding shares in Indian Rupees Crores (1 Crore = 10 Million).
+                        
+                        **Dividend Yield (%)**: Annual dividend payment as a percentage of the stock price, showing income generated relative to investment.
+                        
+                        **YTD Return (%)**: Year-to-Date return, showing the percentage change in stock price since the beginning of the calendar year.
+                        """)
             
-            # Create the dataframe with all data - all in Indian Rupees
-            peers_data = {
-                'Company': companies,
-                'P/E Ratio': pe_ratios,
-                'Market Cap (₹ Cr)': market_caps,
-                'Dividend Yield (%)': dividend_yields,
-                'YTD Return (%)': returns
-            }
-            
-            # Convert to DataFrame and display
-            peers_df = pd.DataFrame(peers_data)
-            st.dataframe(peers_df)
+            except Exception as e:
+                st.error(f"Error loading peer comparison data: {str(e)}")
+                st.info("Please try a different stock symbol or check your internet connection.")
     
     # Research Report Tab  
     with main_tabs[4]:
