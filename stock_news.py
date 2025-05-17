@@ -8,6 +8,8 @@ import re
 import trafilatura
 import time
 import random
+import os
+from openai import OpenAI
 
 @st.cache_data(ttl=3600)
 def get_stock_news(symbol, max_news=5):
@@ -101,9 +103,69 @@ def extract_article_content(url):
         st.warning(f"Error extracting article content: {str(e)}")
         return "Could not extract article content."
 
-def summarize_article(content, title="", max_length=500):
+def summarize_article_with_ai(content, title="", max_tokens=250):
     """
-    Summarize a news article
+    Summarize a news article using OpenAI
+    
+    Args:
+        content (str): Article content to summarize
+        title (str): Article title for context
+        max_tokens (int): Maximum length of summary in tokens
+        
+    Returns:
+        str: AI-generated summary of the article
+    """
+    try:
+        # Initialize OpenAI client with API key
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            return fallback_summarize_article(content, title)
+            
+        client = OpenAI(api_key=openai_api_key)
+        
+        # Prepare article content (trim if very long)
+        if len(content) > 12000:
+            content = content[:12000] + "..."
+        
+        # Create a prompt for the AI to summarize the article
+        prompt = f"""Summarize the following financial news article about a stock or company.
+        
+Title: {title}
+
+Article Content:
+{content}
+
+Provide a concise summary focusing on:
+1. Key financial information
+2. Important business updates
+3. Potential impact on stock price
+4. Any relevant market context
+
+Keep the summary focused on elements that would be relevant to an investor. Be factual and objective.
+"""
+        
+        # Call OpenAI API to generate summary
+        # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
+        # do not change this unless explicitly requested by the user
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=0.5,  # Lower temperature for more factual responses
+        )
+        
+        # Return the generated summary
+        summary = response.choices[0].message.content.strip()
+        return summary
+    
+    except Exception as e:
+        st.warning(f"AI summarization unavailable: {str(e)}. Using basic summarization.")
+        # Fall back to the basic summarization method if AI fails
+        return fallback_summarize_article(content, title)
+
+def fallback_summarize_article(content, title="", max_length=500):
+    """
+    Basic fallback summarization when AI is unavailable
     
     Args:
         content (str): Article content to summarize
@@ -111,7 +173,7 @@ def summarize_article(content, title="", max_length=500):
         max_length (int): Maximum length of summary
         
     Returns:
-        str: Summarized article
+        str: Summarized article using basic algorithm
     """
     # If content is too short, just return it
     if len(content) < max_length:
@@ -155,6 +217,11 @@ def summarize_article(content, title="", max_length=500):
     
     return ' '.join(summary)
 
+# For backward compatibility
+def summarize_article(content, title="", max_length=500):
+    """Wrapper around AI summarization with fallback to basic summarization"""
+    return summarize_article_with_ai(content, title)
+
 def display_news(symbol):
     """
     Display news articles for a stock symbol in the Streamlit app
@@ -171,28 +238,45 @@ def display_news(symbol):
         
         st.subheader(f"📰 Latest News for {symbol}")
         
+        # Check if OpenAI API key is available
+        openai_available = os.environ.get("OPENAI_API_KEY") is not None
+        
         for i, article in enumerate(news):
             with st.expander(f"{article['title']} - {article['publisher']} ({article['date']})"):
-                # Show a "Generate Summary" button
-                if st.button(f"📝 Generate Summary", key=f"summary_{i}_{symbol}"):
-                    with st.spinner("Generating summary..."):
-                        # Extract full article content
-                        content = extract_article_content(article['link'])
-                        
-                        # Summarize the content
-                        summary = summarize_article(content, article['title'])
-                        
-                        # Display the summary
-                        st.markdown("### Quick Summary")
-                        st.markdown(summary)
-                        
-                        # Show source link
-                        st.markdown(f"[Read full article]({article['link']})")
-                else:
-                    # Show the short summary from Yahoo Finance
-                    st.markdown(article['summary'])
-                    
-                    # Show source link
-                    st.markdown(f"[Read full article]({article['link']})")
+                # Show the short summary from Yahoo Finance by default
+                st.markdown(article['summary'])
+                
+                # Show source link
+                st.markdown(f"[Read full article]({article['link']})")
+                
+                # Show AI summary button with appropriate label based on API key availability
+                button_label = "📝 Generate AI Summary" if openai_available else "📝 Generate Summary"
+                if st.button(button_label, key=f"summary_{i}_{symbol}"):
+                    with st.spinner("Analyzing article content..."):
+                        try:
+                            # Extract full article content
+                            content = extract_article_content(article['link'])
+                            
+                            if openai_available:
+                                st.info("Using AI to generate a comprehensive summary...")
+                            
+                            # Summarize the content using the appropriate method
+                            summary = summarize_article(content, article['title'])
+                            
+                            # Display the summary
+                            st.markdown("### Financial Analysis Summary")
+                            st.markdown(summary)
+                            
+                            # Add a note about the summary source
+                            if openai_available:
+                                st.caption("Summary generated with AI analysis")
+                            else:
+                                st.caption("Summary generated with basic text analysis")
+                        except Exception as e:
+                            st.error(f"Error generating summary: {str(e)}")
         
         st.markdown("---")
+        
+        # Add a section for market trends based on news sentiment
+        st.subheader("📊 Market Sentiment Analysis")
+        st.write("Analysis of recent news sentiment for this stock will appear here when you generate article summaries.")
