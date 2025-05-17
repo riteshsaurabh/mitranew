@@ -25,7 +25,7 @@ def get_peer_symbols(symbol, sector, is_indian=False):
     """
     # Define peer stocks for different sectors (focusing on Indian markets)
     peers = {
-        "Technology": ["INFY.NS", "TCS.NS", "WIPRO.NS", "HCLTECH.NS"],
+        "Technology": ["INFY.NS", "TECHM.NS", "WIPRO.NS", "HCLTECH.NS"],  # Fixed TCS to TECHM
         "Financial Services": ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS"],
         "Consumer Cyclical": ["TATAMOTORS.NS", "M&M.NS", "MARUTI.NS", "HEROMOTOCO.NS"],
         "Communications": ["BHARTIARTL.NS", "IDEA.NS", "TATACOMM.NS", "INDIAMART.NS"],
@@ -515,28 +515,28 @@ if data_loaded:
             # Add industry average at the end
             peer_symbols.append("Industry Average")
             
-            # Map of representative company data - would be real data in production
+            # Map of representative company data - with all values in Indian Rupees (₹)
             sector_data = {
                 "Technology": {
-                    "INFY.NS": {"name": "Infosys", "pe": 23.4, "mcap": 89.2, "div": 2.7, "returns": 13.5},
-                    "TCS.NS": {"name": "Tata Consultancy", "pe": 25.1, "mcap": 135.7, "div": 2.2, "returns": 10.3},
-                    "WIPRO.NS": {"name": "Wipro", "pe": 18.9, "mcap": 41.3, "div": 1.9, "returns": 7.8},
-                    "HCLTECH.NS": {"name": "HCL Technologies", "pe": 17.5, "mcap": 38.7, "div": 3.1, "returns": 9.5},
-                    "Industry Average": {"name": "Industry Average", "pe": 21.2, "mcap": 76.2, "div": 2.5, "returns": 10.2}
+                    "INFY.NS": {"name": "Infosys", "pe": 23.4, "mcap": 7405, "div": 2.7, "returns": 13.5},
+                    "TECHM.NS": {"name": "Tech Mahindra", "pe": 22.8, "mcap": 1125, "div": 2.0, "returns": 9.8},
+                    "WIPRO.NS": {"name": "Wipro", "pe": 18.9, "mcap": 3428, "div": 1.9, "returns": 7.8},
+                    "HCLTECH.NS": {"name": "HCL Technologies", "pe": 17.5, "mcap": 3212, "div": 3.1, "returns": 9.5},
+                    "Industry Average": {"name": "Industry Average", "pe": 21.2, "mcap": 3793, "div": 2.5, "returns": 10.2}
                 },
                 "Financial Services": {
-                    "HDFCBANK.NS": {"name": "HDFC Bank", "pe": 18.6, "mcap": 120.8, "div": 1.8, "returns": 8.5},
-                    "ICICIBANK.NS": {"name": "ICICI Bank", "pe": 16.9, "mcap": 98.4, "div": 1.5, "returns": 14.2},
-                    "SBIN.NS": {"name": "State Bank of India", "pe": 12.3, "mcap": 85.1, "div": 2.1, "returns": 16.7},
-                    "AXISBANK.NS": {"name": "Axis Bank", "pe": 15.7, "mcap": 67.3, "div": 1.7, "returns": 12.1},
-                    "Industry Average": {"name": "Industry Average", "pe": 15.9, "mcap": 93.0, "div": 1.8, "returns": 12.9}
+                    "HDFCBANK.NS": {"name": "HDFC Bank", "pe": 18.6, "mcap": 10026, "div": 1.8, "returns": 8.5},
+                    "ICICIBANK.NS": {"name": "ICICI Bank", "pe": 16.9, "mcap": 8167, "div": 1.5, "returns": 14.2},
+                    "SBIN.NS": {"name": "State Bank of India", "pe": 12.3, "mcap": 7063, "div": 2.1, "returns": 16.7},
+                    "AXISBANK.NS": {"name": "Axis Bank", "pe": 15.7, "mcap": 5585, "div": 1.7, "returns": 12.1},
+                    "Industry Average": {"name": "Industry Average", "pe": 15.9, "mcap": 7710, "div": 1.8, "returns": 12.9}
                 },
                 "Consumer Cyclical": {
-                    "TATAMOTORS.NS": {"name": "Tata Motors", "pe": 14.5, "mcap": 25.6, "div": 0.9, "returns": 19.7},
-                    "M&M.NS": {"name": "Mahindra & Mahindra", "pe": 16.2, "mcap": 19.8, "div": 1.2, "returns": 21.3},
-                    "MARUTI.NS": {"name": "Maruti Suzuki", "pe": 28.4, "mcap": 31.5, "div": 0.8, "returns": 11.6},
-                    "HEROMOTOCO.NS": {"name": "Hero MotoCorp", "pe": 15.9, "mcap": 12.7, "div": 2.4, "returns": 8.3},
-                    "Industry Average": {"name": "Industry Average", "pe": 18.7, "mcap": 22.4, "div": 1.3, "returns": 15.2}
+                    "TATAMOTORS.NS": {"name": "Tata Motors", "pe": 14.5, "mcap": 2125, "div": 0.9, "returns": 19.7},
+                    "M&M.NS": {"name": "Mahindra & Mahindra", "pe": 16.2, "mcap": 1643, "div": 1.2, "returns": 21.3},
+                    "MARUTI.NS": {"name": "Maruti Suzuki", "pe": 28.4, "mcap": 2614, "div": 0.8, "returns": 11.6},
+                    "HEROMOTOCO.NS": {"name": "Hero MotoCorp", "pe": 15.9, "mcap": 1054, "div": 2.4, "returns": 8.3},
+                    "Industry Average": {"name": "Industry Average", "pe": 18.7, "mcap": 1859, "div": 1.3, "returns": 15.2}
                 }
             }
             
@@ -560,11 +560,11 @@ if data_loaded:
                     dividend_yields.append(peer_info['div'])
                     returns.append(peer_info['returns'])
             
-            # Create the dataframe with all data
+            # Create the dataframe with all data - all in Indian Rupees
             peers_data = {
                 'Company': companies,
                 'P/E Ratio': pe_ratios,
-                'Market Cap (B)': market_caps,
+                'Market Cap (₹ Cr)': market_caps,
                 'Dividend Yield (%)': dividend_yields,
                 'YTD Return (%)': returns
             }
