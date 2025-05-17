@@ -134,12 +134,13 @@ def create_line_chart(data, currency="$"):
     
     return fig
 
-def create_candlestick_chart(data):
+def create_candlestick_chart(data, currency="$"):
     """
     Create a candlestick chart for stock prices
     
     Args:
         data (pandas.DataFrame): Stock price data
+        currency (str): Currency symbol to display (default: $)
     
     Returns:
         plotly.graph_objects.Figure: Candlestick chart figure
@@ -160,16 +161,21 @@ def create_candlestick_chart(data):
         )
     )
     
+    # Determine currency name for title
+    currency_name = "USD"
+    if currency == "₹":
+        currency_name = "INR"
+    
     # Update layout
     fig.update_layout(
         title="Candlestick Chart",
         xaxis_title="Date",
-        yaxis_title="Price (USD)",
+        yaxis_title=f"Price ({currency_name})",
         xaxis_rangeslider_visible=False,
         margin=dict(l=0, r=0, t=40, b=0),
     )
     
-    fig.update_yaxes(tickprefix='$')
+    fig.update_yaxes(tickprefix=currency)
     
     return fig
 
