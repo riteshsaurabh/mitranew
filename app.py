@@ -9,6 +9,7 @@ import financial_metrics
 import simple_watchlist
 import indian_markets
 import stock_news
+import stock_prediction
 
 # Function to get peer stock symbols based on sector
 def get_peer_symbols(symbol, sector, is_indian=False):
@@ -466,6 +467,13 @@ if data_loaded:
     # Performance Analysis Tab
     with main_tabs[3]:
         st.header("Performance Analysis")
+        
+        # Add stock price prediction with animated trend line and confidence intervals
+        st.subheader("Price Prediction Analysis")
+        # Get company name for the chart title
+        company_name = company_info.get('shortName', stock_symbol)
+        # Display the stock prediction section with animated chart
+        stock_prediction.display_prediction_section(stock_symbol, hist_data, company_name, is_indian_stock)
         
         # Historical Performance
         st.subheader("Historical Performance")
