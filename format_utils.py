@@ -100,3 +100,56 @@ def format_number(num, decimal_places=2):
         
     format_str = f"{{:.{decimal_places}f}}"
     return format_str.format(num)
+
+def format_indian_numbers(num, decimal_places=2, in_lakhs=False, in_crores=False):
+    """
+    Format numbers with Indian numbering system (commas after 3 digits, then every 2 digits)
+    
+    Args:
+        num: Number to format
+        decimal_places (int): Number of decimal places to display
+        in_lakhs (bool): Whether to display in lakhs (divide by 100,000)
+        in_crores (bool): Whether to display in crores (divide by 10,000,000)
+        
+    Returns:
+        str: Formatted number with Indian style commas
+    """
+    if not isinstance(num, (int, float)):
+        return "N/A"
+    
+    # Determine if value should be displayed in lakhs or crores
+    if in_crores:
+        num = num / 10000000
+        suffix = " Cr"
+    elif in_lakhs:
+        num = num / 100000
+        suffix = " L"
+    else:
+        suffix = ""
+        
+    # Format with the specified decimal places
+    formatted_num = f"{num:.{decimal_places}f}"
+    
+    # Split the number into integer and decimal parts
+    integer_part, decimal_part = formatted_num.split(".")
+    
+    # Format the integer part with Indian style commas
+    # (e.g., 10,00,00,000 instead of 100,000,000)
+    result = ""
+    if len(integer_part) <= 3:
+        result = integer_part
+    else:
+        # Add the last 3 digits
+        result = integer_part[-3:]
+        # Add the rest of the digits in groups of 2
+        for i in range(len(integer_part) - 3, 0, -2):
+            if i-2 >= 0:
+                result = integer_part[i-2:i] + "," + result
+            else:
+                result = integer_part[:i] + "," + result
+    
+    # Add the decimal part back
+    if decimal_places > 0:
+        result = result + "." + decimal_part
+        
+    return result + suffix

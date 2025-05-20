@@ -448,14 +448,26 @@ with main_tabs[2]:
             
             # Display currency based on stock type
             if is_indian:
-                st.write("All figures in millions ₹")
                 # Convert to INR if it's an Indian stock (approximate conversion)
                 income_statement = income_statement * 83.0  # Using fixed conversion rate
+                
+                # For Indian stocks, we'll display in Crores (not millions)
+                st.write("All figures in ₹ Crores")
+                
+                # Format values to Indian system with commas, in Crores
+                for col in income_statement.columns:
+                    income_statement[col] = income_statement[col].apply(
+                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_crores=True)
+                    )
             else:
                 st.write("All figures in millions $")
                 
-            # Format all numeric values to 2 decimal places
-            income_statement = income_statement.round(2)
+                # Format all numeric values to 2 decimal places with commas for readability
+                income_statement = income_statement.round(2)
+                for col in income_statement.columns:
+                    income_statement[col] = income_statement[col].apply(
+                        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
+                    )
             
             st.dataframe(income_statement)
         else:
@@ -477,14 +489,26 @@ with main_tabs[2]:
             
             # Display currency based on stock type
             if is_indian:
-                st.write("All figures in millions ₹")
                 # Convert to INR if it's an Indian stock (approximate conversion)
                 balance_sheet = balance_sheet * 83.0  # Using fixed conversion rate
+                
+                # For Indian stocks, we'll display in Crores (not millions)
+                st.write("All figures in ₹ Crores")
+                
+                # Format values to Indian system with commas, in Crores
+                for col in balance_sheet.columns:
+                    balance_sheet[col] = balance_sheet[col].apply(
+                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_crores=True)
+                    )
             else:
                 st.write("All figures in millions $")
                 
-            # Format all numeric values to 2 decimal places
-            balance_sheet = balance_sheet.round(2)
+                # Format all numeric values to 2 decimal places with commas for readability
+                balance_sheet = balance_sheet.round(2)
+                for col in balance_sheet.columns:
+                    balance_sheet[col] = balance_sheet[col].apply(
+                        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
+                    )
             
             st.dataframe(balance_sheet)
         else:
@@ -506,14 +530,26 @@ with main_tabs[2]:
                 
             # Display currency based on stock type
             if is_indian:
-                st.write("All figures in millions ₹")
                 # Convert to INR if it's an Indian stock (approximate conversion)
                 cash_flow = cash_flow * 83.0  # Using fixed conversion rate
+                
+                # For Indian stocks, we'll display in Crores (not millions)
+                st.write("All figures in ₹ Crores")
+                
+                # Format values to Indian system with commas, in Crores
+                for col in cash_flow.columns:
+                    cash_flow[col] = cash_flow[col].apply(
+                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_crores=True)
+                    )
             else:
                 st.write("All figures in millions $")
                 
-            # Format all numeric values to 2 decimal places
-            cash_flow = cash_flow.round(2)
+                # Format all numeric values to 2 decimal places with commas for readability
+                cash_flow = cash_flow.round(2)
+                for col in cash_flow.columns:
+                    cash_flow[col] = cash_flow[col].apply(
+                        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
+                    )
             
             st.dataframe(cash_flow)
         else:
@@ -813,7 +849,12 @@ def get_peer_comparison_data(main_symbol, peer_symbols, is_indian=False):
             # Market cap (with Indian notation if needed)
             market_cap = info.get('marketCap', None)
             if market_cap:
-                data['Market Cap'] = format_utils.format_large_number(market_cap, is_indian=is_indian)
+                if is_indian:
+                    # For Indian stocks, display market cap in Crores with Indian formatting
+                    market_cap_inr = market_cap * 83.0  # Convert to INR
+                    data['Market Cap'] = format_utils.format_indian_numbers(market_cap_inr, in_crores=True)
+                else:
+                    data['Market Cap'] = format_utils.format_large_number(market_cap, is_indian=False)
             else:
                 data['Market Cap'] = None
             
