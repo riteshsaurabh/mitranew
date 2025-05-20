@@ -425,74 +425,7 @@ with main_tabs[1]:
         utils.display_metrics_cards(metrics_data, "")
 
 # Financial Statements Tab
-# Emoji-based Mood Tracker Tab (NEW)
 with main_tabs[2]:
-    st.header("Emoji Mood Tracker")
-    
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, rgba(25, 57, 138, 0.05), rgba(78, 205, 196, 0.1));
-              border-radius: 15px; 
-              padding: 20px; 
-              margin-bottom: 20px;
-              border: 1px solid rgba(78, 205, 196, 0.2);">
-        <h3 style="margin-top:0; color:#19398A; font-weight:600; margin-bottom:15px;">
-            <span style="font-size: 1.8rem; margin-right: 10px;">🧠📊</span> 
-            Financial Sentiment Analysis
-        </h3>
-        <p style="color:#19398A; font-size: 0.95rem; margin-bottom: 0;">
-            Visualizing market sentiment through intuitive emoji indicators. This analysis combines price action, 
-            volume patterns, and news sentiment to help you understand the current market mood at a glance.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Get news data for the stock
-    try:
-        news_data = stock_news.get_stock_news(stock_symbol, max_news=5)
-    except:
-        news_data = []
-    
-    # Display the sentiment dashboard with emoji indicators
-    try:
-        sentiment_tracker.display_sentiment_dashboard(stock_symbol, stock_data, news_data)
-    except Exception as e:
-        st.error(f"Error displaying sentiment dashboard: {str(e)}")
-        
-    # Explain the indicators
-    with st.expander("Understanding Sentiment Indicators"):
-        st.markdown("""
-        ### How to Interpret Emoji Indicators
-        
-        Our emoji-based mood tracker translates complex market sentiment into intuitive visual indicators:
-        
-        **Price Sentiment:**
-        - 🚀 **Very Bullish** - Strong upward momentum across timeframes
-        - 😁 **Bullish** - Generally positive price action
-        - 😐 **Neutral** - No clear directional bias
-        - 😟 **Bearish** - Generally negative price action
-        - 🧸 **Very Bearish** - Strong downward momentum across timeframes
-        - 🎢 **Volatile** - High volatility with significant price swings
-        - 🌱 **Recovery** - Potential recovery forming after downtrend
-        
-        **Volume Analysis:**
-        - 📈 **High Interest** - Unusually high trading volume
-        - 👀 **Increased Interest** - Above average trading activity
-        - 📊 **Average Volume** - Normal trading activity
-        - 💤 **Low Interest** - Below average trading volume
-        
-        **News Sentiment:**
-        - 📰😁 **Positive** - Positive news sentiment
-        - 📰🙂 **Slightly Positive** - Mildly positive news tone
-        - 📰😐 **Neutral** - Balanced news coverage
-        - 📰🙁 **Slightly Negative** - Mildly negative news tone
-        - 📰😟 **Negative** - Negative news sentiment
-        
-        **Market Mood Index:**
-        The gauge shows the overall market mood from -100 (extremely bearish) to +100 (extremely bullish),
-        combining price action, volume patterns, and news sentiment into a single comprehensive score.
-        """)
-
-with main_tabs[3]:
     # Financial statements section
     st.header("Financial Statements")
     
