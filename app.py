@@ -471,11 +471,97 @@ with main_tabs[5]:
     
     # Get peer comparison data
     try:
-        peer_comparison_data = get_peer_comparison_data(stock_symbol, peer_symbols, is_indian)
+        # Get peer comparison data
+        all_symbols = [stock_symbol] + peer_symbols
         
-        # Display peer comparison
-        if not peer_comparison_data.empty:
-            st.dataframe(peer_comparison_data)
+        # Initialize an empty DataFrame
+        comparison_data = pd.DataFrame()
+        
+        # Define metrics to fetch
+        metrics = [
+            'shortName', 'currentPrice', 'marketCap', 'trailingPE', 
+            'priceToBook', 'profitMargins', 'returnOnEquity',
+            'dividendYield', 'beta'
+        ]
+        
+        # Fetch data for each symbol
+        for symbol in all_symbols:
+            try:
+                if is_indian and (symbol.endswith('.NS') or symbol.endswith('.BO')):
+                    # Use indian_markets module for Indian stocks
+                    info = indian_markets.get_indian_company_info(symbol)
+                else:
+                    # Use yfinance for other stocks
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                
+                # Extract metrics
+                data = {}
+                data['Symbol'] = symbol
+                data['Company'] = info.get('shortName', symbol)
+                
+                # Market data
+                data['Price'] = info.get('currentPrice', info.get('regularMarketPrice', None))
+                
+                # Market cap (with Indian notation if needed)
+                market_cap = info.get('marketCap', None)
+                if is_indian and market_cap:
+                    data['Market Cap'] = indian_markets.format_inr(market_cap)
+                else:
+                    data['Market Cap'] = utils.format_large_number(market_cap) if market_cap else None
+                
+                # Other metrics
+                data['P/E Ratio'] = info.get('trailingPE', None)
+                data['P/B Ratio'] = info.get('priceToBook', None)
+                data['Profit Margin'] = info.get('profitMargins', None) * 100 if info.get('profitMargins') else None
+                data['ROE'] = info.get('returnOnEquity', None) * 100 if info.get('returnOnEquity') else None
+                data['Dividend Yield'] = info.get('dividendYield', None) * 100 if info.get('dividendYield') else None
+                data['Beta'] = info.get('beta', None)
+                
+                # Append to DataFrame
+                comparison_data = pd.concat([comparison_data, pd.DataFrame([data])], ignore_index=True)
+                
+            except Exception as e:
+                st.warning(f"Error fetching data for {symbol}: {str(e)}")
+        
+        # Format percentages
+        for col in ['Profit Margin', 'ROE', 'Dividend Yield']:
+            if col in comparison_data.columns:
+                comparison_data[col] = comparison_data[col].apply(
+                    lambda x: f"{x:.2f}%" if pd.notnull(x) else None
+                )
+        
+        # Format other numeric columns
+        for col in ['P/E Ratio', 'P/B Ratio', 'Beta']:
+            if col in comparison_data.columns:
+                comparison_data[col] = comparison_data[col].apply(
+                    lambda x: f"{x:.2f}" if pd.notnull(x) else None
+                )
+        
+        # Format price with currency symbol
+        comparison_data['Price'] = comparison_data['Price'].apply(
+            lambda x: f"₹{x:.2f}" if pd.notnull(x) and is_indian else f"${x:.2f}" if pd.notnull(x) else None
+        )
+        
+        # Display peer comparison with styled dataframe
+        if not comparison_data.empty:
+            st.dataframe(
+                comparison_data,
+                column_config={
+                    "Symbol": st.column_config.TextColumn("Symbol", width="medium"),
+                    "Company": st.column_config.TextColumn("Company", width="large"),
+                    "Price": st.column_config.TextColumn("Price", width="medium"),
+                    "Market Cap": st.column_config.TextColumn("Market Cap", width="medium"),
+                    "P/E Ratio": st.column_config.TextColumn("P/E Ratio", width="medium"),
+                    "P/B Ratio": st.column_config.TextColumn("P/B Ratio", width="medium"),
+                    "Profit Margin": st.column_config.TextColumn("Profit Margin", width="medium"),
+                    "ROE": st.column_config.TextColumn("ROE", width="medium"),
+                    "Dividend Yield": st.column_config.TextColumn("Dividend Yield", width="medium"),
+                    "Beta": st.column_config.TextColumn("Beta", width="medium"),
+                },
+                use_container_width=True,
+                hide_index=True,
+            )
         else:
             st.warning("Could not fetch peer comparison data.")
     except Exception as e:

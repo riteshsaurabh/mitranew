@@ -65,6 +65,110 @@ def format_large_number(num):
         return f"${abs_num / 1_000:.2f}K"
     else:
         return f"${abs_num:.2f}"
+        
+def create_price_chart(data, title, is_indian=False):
+    """
+    Create a price chart for stock with a modern, Gen-Z friendly design
+    
+    Args:
+        data (pandas.DataFrame): Stock price data
+        title (str): Chart title (usually company name)
+        is_indian (bool): Whether it's an Indian stock (for currency symbol)
+        
+    Returns:
+        plotly.graph_objects.Figure: Price chart figure
+    """
+    # Set currency based on whether it's an Indian stock
+    currency = "₹" if is_indian else "$"
+    
+    # Create figure with secondary y-axis for volume
+    fig = make_subplots(
+        rows=2, 
+        cols=1, 
+        shared_xaxes=True,
+        vertical_spacing=0.1,
+        subplot_titles=(f"{title} - Price", "Volume"),
+        row_heights=[0.7, 0.3]
+    )
+    
+    # Add price line
+    fig.add_trace(
+        go.Scatter(
+            x=data.index,
+            y=data['Close'],
+            mode='lines',
+            name='Close Price',
+            line=dict(color='#FF6B1A', width=2),
+            hovertemplate=f'Date: %{{x}}<br>Price: {currency}%{{y:.2f}}<extra></extra>'
+        ),
+        row=1, col=1
+    )
+    
+    # Add volume bars
+    colors = ['#26A69A' if row['Close'] >= row['Open'] else '#EF5350' for _, row in data.iterrows()]
+    
+    fig.add_trace(
+        go.Bar(
+            x=data.index,
+            y=data['Volume'],
+            name='Volume',
+            marker_color=colors,
+            opacity=0.7,
+            hovertemplate='Date: %{x}<br>Volume: %{y:,.0f}<extra></extra>'
+        ),
+        row=2, col=1
+    )
+    
+    # Determine currency name based on is_indian
+    currency_name = "INR" if is_indian else "USD"
+    
+    # Update layout with modern styling
+    fig.update_layout(
+        title=None,  # We'll use Streamlit's header instead
+        hovermode="x unified",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        plot_bgcolor='rgba(250,250,250,0.9)',
+        font=dict(
+            family="Arial, sans-serif",
+            size=12,
+            color="#2D3047"
+        ),
+        margin=dict(l=0, r=0, t=10, b=0),
+        height=500
+    )
+    
+    # Update axes for modern look
+    fig.update_xaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='rgba(230,230,230,0.6)',
+        zeroline=False
+    )
+    
+    fig.update_yaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='rgba(230,230,230,0.6)',
+        zeroline=False,
+        tickprefix=currency,
+        row=1, col=1
+    )
+    
+    fig.update_yaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='rgba(230,230,230,0.6)',
+        zeroline=False,
+        row=2, col=1
+    )
+    
+    return fig
 
 def create_line_chart(data, currency="$"):
     """
@@ -326,6 +430,407 @@ def get_cash_flow(ticker):
     except Exception as e:
         print(f"Error fetching cash flow: {e}")
         return pd.DataFrame()
+
+def display_metrics_cards(metrics_data, section_title="", is_indian=False):
+    """
+    Display financial metrics in a modern card layout
+    
+    Args:
+        metrics_data (dict): Financial metrics to display
+        section_title (str): Section title
+        is_indian (bool): Whether to use Indian currency format
+    """
+    if section_title:
+        st.markdown(f"<h4 style='margin-bottom: 15px;'>{section_title}</h4>", unsafe_allow_html=True)
+    
+    # Create columns for the metrics
+    num_metrics = len(metrics_data)
+    cols_per_row = 3
+    
+    # Calculate number of rows needed
+    num_rows = (num_metrics + cols_per_row - 1) // cols_per_row
+    
+    # Generate rows of cards
+    keys = list(metrics_data.keys())
+    values = list(metrics_data.values())
+    
+    for row in range(num_rows):
+        # Create columns for this row
+        columns = st.columns(cols_per_row)
+        
+        # Add metrics to each column
+        for col in range(cols_per_row):
+            idx = row * cols_per_row + col
+            if idx < num_metrics:
+                with columns[col]:
+                    # Generate a random color for the metric card
+                    metric_colors = ["#FF6B1A", "#2D3047", "#00C853", "#2196F3"]
+                    color = metric_colors[idx % len(metric_colors)]
+                    
+                    # Create a styled metric card
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(90deg, {color}10, {color}05); 
+                        padding: 15px; border-radius: 10px; border-left: 4px solid {color};
+                        margin-bottom: 15px; height: 100%;">
+                        <p style="color: #71717a; font-size: 0.8rem; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em;">
+                            {keys[idx]}
+                        </p>
+                        <h3 style="color: #2D3047; margin: 0; font-size: 1.3rem; font-weight: 600;">
+                            {values[idx]}
+                        </h3>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+def create_technical_chart(data, chart_title="Stock Price", chart_type="candlestick", indicators=None, ma_periods=None, is_indian=False):
+    """
+    Create a technical chart with user-selected indicators
+    
+    Args:
+        data (pandas.DataFrame): Stock price data
+        chart_title (str): Chart title
+        chart_type (str): Chart type (candlestick, line, ohlc, area)
+        indicators (list): List of indicators to include
+        ma_periods (list): List of periods for moving averages
+        is_indian (bool): Whether it's an Indian stock
+        
+    Returns:
+        plotly.graph_objects.Figure: Technical chart figure
+    """
+    if indicators is None:
+        indicators = []
+    if ma_periods is None:
+        ma_periods = []
+    
+    # Set currency based on whether it's an Indian stock
+    currency = "₹" if is_indian else "$"
+    
+    # Create subplots with rows based on selected indicators
+    rows = 1 + ("Volume" in indicators) + ("RSI" in indicators) + ("MACD" in indicators)
+    row_heights = [0.5]
+    
+    # Define row heights for additional indicators
+    if "Volume" in indicators:
+        row_heights.append(0.1)
+    if "RSI" in indicators:
+        row_heights.append(0.2)
+    if "MACD" in indicators:
+        row_heights.append(0.2)
+    
+    # Create figure
+    fig = make_subplots(
+        rows=rows, 
+        cols=1, 
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        row_heights=row_heights
+    )
+    
+    # Main price chart
+    current_row = 1
+    
+    if chart_type == "candlestick":
+        # Candlestick chart
+        fig.add_trace(
+            go.Candlestick(
+                x=data.index,
+                open=data['Open'],
+                high=data['High'],
+                low=data['Low'],
+                close=data['Close'],
+                increasing_line_color='#26A69A',
+                decreasing_line_color='#EF5350',
+                name='Price'
+            ),
+            row=current_row, col=1
+        )
+    elif chart_type == "line":
+        # Line chart
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=data['Close'],
+                mode='lines',
+                name='Close Price',
+                line=dict(color='#FF6B1A', width=2),
+                hovertemplate=f'Date: %{{x}}<br>Price: {currency}%{{y:.2f}}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+    elif chart_type == "ohlc":
+        # OHLC chart
+        fig.add_trace(
+            go.Ohlc(
+                x=data.index,
+                open=data['Open'],
+                high=data['High'],
+                low=data['Low'],
+                close=data['Close'],
+                increasing_line_color='#26A69A',
+                decreasing_line_color='#EF5350',
+                name='Price'
+            ),
+            row=current_row, col=1
+        )
+    elif chart_type == "area":
+        # Area chart
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=data['Close'],
+                mode='lines',
+                fill='tozeroy',
+                name='Close Price',
+                line=dict(color='#FF6B1A', width=2),
+                fillcolor='rgba(255, 107, 26, 0.2)',
+                hovertemplate=f'Date: %{{x}}<br>Price: {currency}%{{y:.2f}}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+    
+    # Add Moving Averages
+    if "Moving Average" in indicators and ma_periods:
+        colors = ['#4D908E', '#277DA1', '#F94144', '#F3722C', '#F8961E']
+        
+        for i, period in enumerate(ma_periods):
+            if len(data) >= period:
+                ma_data = data['Close'].rolling(window=period).mean()
+                color = colors[i % len(colors)]
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=data.index,
+                        y=ma_data,
+                        mode='lines',
+                        name=f'{period}-day MA',
+                        line=dict(color=color, width=1.5, dash='dot'),
+                        hovertemplate=f'{period}-day MA: {currency}%{{y:.2f}}<extra></extra>'
+                    ),
+                    row=current_row, col=1
+                )
+    
+    # Add Bollinger Bands
+    if "Bollinger Bands" in indicators:
+        # Calculate 20-day Moving Average
+        ma20 = data['Close'].rolling(window=20).mean()
+        
+        # Calculate upper and lower bands (20-day MA +/- 2 standard deviations)
+        std20 = data['Close'].rolling(window=20).std()
+        upper_band = ma20 + (std20 * 2)
+        lower_band = ma20 - (std20 * 2)
+        
+        # Add bands to chart
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=upper_band,
+                mode='lines',
+                name='Upper BB',
+                line=dict(color='rgba(45, 48, 71, 0.4)', width=1, dash='dot'),
+                hovertemplate=f'Upper BB: {currency}%{{y:.2f}}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+        
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=ma20,
+                mode='lines',
+                name='20-day MA',
+                line=dict(color='rgba(45, 48, 71, 0.7)', width=1.5),
+                hovertemplate=f'20-day MA: {currency}%{{y:.2f}}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+        
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=lower_band,
+                mode='lines',
+                name='Lower BB',
+                line=dict(color='rgba(45, 48, 71, 0.4)', width=1, dash='dot'),
+                hovertemplate=f'Lower BB: {currency}%{{y:.2f}}<extra></extra>',
+                fill='tonexty',
+                fillcolor='rgba(45, 48, 71, 0.05)'
+            ),
+            row=current_row, col=1
+        )
+    
+    # Add Volume
+    if "Volume" in indicators:
+        current_row += 1
+        colors = ['#26A69A' if row['Close'] >= row['Open'] else '#EF5350' for _, row in data.iterrows()]
+        
+        fig.add_trace(
+            go.Bar(
+                x=data.index,
+                y=data['Volume'],
+                name='Volume',
+                marker_color=colors,
+                hovertemplate='Date: %{x}<br>Volume: %{y:,.0f}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+    
+    # Add RSI
+    if "RSI" in indicators:
+        current_row += 1
+        
+        # Calculate RSI
+        delta = data['Close'].diff()
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+        
+        avg_gain = gain.rolling(window=14).mean()
+        avg_loss = loss.rolling(window=14).mean()
+        
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        
+        # Add RSI line
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=rsi,
+                mode='lines',
+                name='RSI (14)',
+                line=dict(color='#FF6B1A', width=1.5),
+                hovertemplate='RSI: %{y:.2f}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+        
+        # Add overbought/oversold lines
+        fig.add_trace(
+            go.Scatter(
+                x=[data.index[0], data.index[-1]],
+                y=[70, 70],
+                mode='lines',
+                name='Overbought',
+                line=dict(color='#EF5350', width=1, dash='dash'),
+                hoverinfo='none'
+            ),
+            row=current_row, col=1
+        )
+        
+        fig.add_trace(
+            go.Scatter(
+                x=[data.index[0], data.index[-1]],
+                y=[30, 30],
+                mode='lines',
+                name='Oversold',
+                line=dict(color='#26A69A', width=1, dash='dash'),
+                hoverinfo='none'
+            ),
+            row=current_row, col=1
+        )
+    
+    # Add MACD
+    if "MACD" in indicators:
+        current_row += 1
+        
+        # Calculate MACD
+        ema12 = data['Close'].ewm(span=12, adjust=False).mean()
+        ema26 = data['Close'].ewm(span=26, adjust=False).mean()
+        macd = ema12 - ema26
+        signal = macd.ewm(span=9, adjust=False).mean()
+        histogram = macd - signal
+        
+        # Add MACD line
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=macd,
+                mode='lines',
+                name='MACD',
+                line=dict(color='#2D3047', width=1.5),
+                hovertemplate='MACD: %{y:.2f}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+        
+        # Add signal line
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=signal,
+                mode='lines',
+                name='Signal',
+                line=dict(color='#FF6B1A', width=1.5, dash='dot'),
+                hovertemplate='Signal: %{y:.2f}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+        
+        # Add histogram
+        colors = ['#26A69A' if val >= 0 else '#EF5350' for val in histogram]
+        
+        fig.add_trace(
+            go.Bar(
+                x=data.index,
+                y=histogram,
+                name='Histogram',
+                marker_color=colors,
+                hovertemplate='Histogram: %{y:.2f}<extra></extra>'
+            ),
+            row=current_row, col=1
+        )
+    
+    # Update layout with modern styling
+    fig.update_layout(
+        title=chart_title,
+        hovermode="x unified",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        plot_bgcolor='rgba(250,250,250,0.9)',
+        font=dict(
+            family="Arial, sans-serif",
+            size=12,
+            color="#2D3047"
+        ),
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=800 if rows > 2 else 600
+    )
+    
+    # Update axes for modern look
+    fig.update_xaxes(
+        showgrid=True,
+        gridwidth=1,
+        gridcolor='rgba(230,230,230,0.6)',
+        zeroline=False
+    )
+    
+    # Apply stylish y-axes to all rows
+    for row in range(1, rows + 1):
+        fig.update_yaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(230,230,230,0.6)',
+            zeroline=False,
+            row=row, col=1
+        )
+    
+    # Add currency prefix to price chart
+    fig.update_yaxes(
+        tickprefix=currency + ' ',
+        row=1, col=1
+    )
+    
+    # Set y-axis ranges for RSI
+    if "RSI" in indicators:
+        rsi_row = 1 + ("Volume" in indicators) + 1
+        fig.update_yaxes(
+            range=[0, 100],
+            row=rsi_row, col=1
+        )
+    
+    return fig
 
 def display_key_ratios_table(ratios_data):
     """
