@@ -389,17 +389,28 @@ def get_income_statement(ticker):
         income_stmt = stock.income_stmt
         
         if income_stmt.empty:
+            # Try using the financials endpoint as a fallback
+            financials = stock.financials
+            if not financials.empty:
+                return financials.T
             return pd.DataFrame()
         
         # Clean and format the data
         income_stmt = income_stmt.T
-        
-        # Format the numbers to thousands
-        income_stmt = income_stmt / 1_000
+                
+        # Keep original values without dividing by 1000
+        # Numbers will be properly formatted in the display function
         
         return income_stmt
     except Exception as e:
         print(f"Error fetching income statement: {e}")
+        # Try alternative method
+        try:
+            financials = stock.financials
+            if not financials.empty:
+                return financials.T
+        except:
+            pass
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
@@ -418,17 +429,28 @@ def get_balance_sheet(ticker):
         balance_sheet = stock.balance_sheet
         
         if balance_sheet.empty:
+            # Try using the balance_sheet endpoint as a fallback
+            bs_annual = stock.quarterly_balance_sheet
+            if not bs_annual.empty:
+                return bs_annual.T
             return pd.DataFrame()
         
         # Clean and format the data
         balance_sheet = balance_sheet.T
         
-        # Format the numbers to thousands
-        balance_sheet = balance_sheet / 1_000
+        # Keep original values without dividing
+        # The formatting will be handled in the display function
         
         return balance_sheet
     except Exception as e:
         print(f"Error fetching balance sheet: {e}")
+        # Try alternative method
+        try:
+            bs_annual = stock.quarterly_balance_sheet
+            if not bs_annual.empty:
+                return bs_annual.T
+        except:
+            pass
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
@@ -447,17 +469,28 @@ def get_cash_flow(ticker):
         cash_flow = stock.cashflow
         
         if cash_flow.empty:
+            # Try using the quarterly cash flow as a fallback
+            quarterly_cf = stock.quarterly_cashflow
+            if not quarterly_cf.empty:
+                return quarterly_cf.T
             return pd.DataFrame()
         
         # Clean and format the data
         cash_flow = cash_flow.T
         
-        # Format the numbers to thousands
-        cash_flow = cash_flow / 1_000
+        # Keep original values without dividing
+        # The formatting will be handled in the display function
         
         return cash_flow
     except Exception as e:
         print(f"Error fetching cash flow: {e}")
+        # Try alternative method
+        try:
+            quarterly_cf = stock.quarterly_cashflow
+            if not quarterly_cf.empty:
+                return quarterly_cf.T
+        except:
+            pass
         return pd.DataFrame()
 
 def display_metrics_cards(metrics_data, section_title="", is_indian=False):
