@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from datetime import datetime, timedelta
+import format_utils
 
 @st.cache_data(ttl=3600)
 def get_financial_metrics(ticker):
@@ -60,32 +61,39 @@ def extract_key_ratios(info):
         info (dict): Stock info dictionary from yfinance
     
     Returns:
-        dict: Key financial ratios
+        dict: Key financial ratios formatted to 2 decimal places
     """
     # Initialize empty dictionary for ratios
     ratios = {}
     
-    # Profitability ratios
-    ratios['grossMargins'] = info.get('grossMargins')
-    ratios['operatingMargins'] = info.get('operatingMargins')
-    ratios['profitMargins'] = info.get('profitMargins')
-    ratios['returnOnAssets'] = info.get('returnOnAssets')
-    ratios['returnOnEquity'] = info.get('returnOnEquity')
+    # Format percentage values
+    percentage_ratios = [
+        'grossMargins', 'operatingMargins', 'profitMargins', 
+        'returnOnAssets', 'returnOnEquity'
+    ]
     
-    # Liquidity ratios
-    ratios['currentRatio'] = info.get('currentRatio')
-    ratios['quickRatio'] = info.get('quickRatio')
+    for ratio in percentage_ratios:
+        value = info.get(ratio)
+        if value is not None:
+            # Convert to percentage and format with 2 decimal places
+            ratios[ratio] = format_utils.format_percent(value)
+        else:
+            ratios[ratio] = "N/A"
     
-    # Solvency ratios
-    ratios['debtToEquity'] = info.get('debtToEquity')
+    # Format other numeric ratios
+    other_ratios = [
+        'currentRatio', 'quickRatio', 'debtToEquity',
+        'interestCoverage', 'assetTurnover', 'inventoryTurnover',
+        'receivablesTurnover', 'payablesTurnover'
+    ]
     
-    # Other financial ratios that might be available
-    # Note: Some of these may not be available in yfinance API
-    ratios['interestCoverage'] = info.get('interestCoverage', None)
-    ratios['assetTurnover'] = info.get('assetTurnover', None)
-    ratios['inventoryTurnover'] = info.get('inventoryTurnover', None)
-    ratios['receivablesTurnover'] = info.get('receivablesTurnover', None)
-    ratios['payablesTurnover'] = info.get('payablesTurnover', None)
+    for ratio in other_ratios:
+        value = info.get(ratio)
+        if value is not None:
+            # Format with 2 decimal places
+            ratios[ratio] = format_utils.format_number(value)
+        else:
+            ratios[ratio] = "N/A"
     
     return ratios
 
@@ -114,23 +122,28 @@ def calculate_performance_metrics(hist_data, info):
         
         # 1 day return
         if len(hist_data) > 1:
-            performance['oneDay'] = ((latest_close / hist_data['Close'].iloc[-2]) - 1) * 100
+            one_day_return = ((latest_close / hist_data['Close'].iloc[-2]) - 1)
+            performance['oneDay'] = format_utils.format_percent(one_day_return)
         
         # 5 day return
         if len(hist_data) > 5:
-            performance['fiveDay'] = ((latest_close / hist_data['Close'].iloc[-6]) - 1) * 100
+            five_day_return = ((latest_close / hist_data['Close'].iloc[-6]) - 1)
+            performance['fiveDay'] = format_utils.format_percent(five_day_return)
         
         # 1 month return (21 trading days)
         if len(hist_data) > 21:
-            performance['oneMonth'] = ((latest_close / hist_data['Close'].iloc[-22]) - 1) * 100
+            one_month_return = ((latest_close / hist_data['Close'].iloc[-22]) - 1)
+            performance['oneMonth'] = format_utils.format_percent(one_month_return)
         
         # 3 month return (63 trading days)
         if len(hist_data) > 63:
-            performance['threeMonth'] = ((latest_close / hist_data['Close'].iloc[-64]) - 1) * 100
+            three_month_return = ((latest_close / hist_data['Close'].iloc[-64]) - 1)
+            performance['threeMonth'] = format_utils.format_percent(three_month_return)
         
         # 6 month return (126 trading days)
         if len(hist_data) > 126:
-            performance['sixMonth'] = ((latest_close / hist_data['Close'].iloc[-127]) - 1) * 100
+            six_month_return = ((latest_close / hist_data['Close'].iloc[-127]) - 1)
+            performance['sixMonth'] = format_utils.format_percent(six_month_return)
         
         # YTD return
         current_year = datetime.now().year
