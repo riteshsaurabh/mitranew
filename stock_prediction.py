@@ -382,7 +382,10 @@ def display_prediction_section(stock_symbol, hist_data, company_name, is_indian=
     with st.spinner("Generating price prediction..."):
         # Use a try-except block for additional error handling
         try:
-            prediction = generate_price_prediction(hist_data, forecast_days, model_type)
+            # Ensure forecast_days is an integer
+            forecast_days_int = int(forecast_days)
+            
+            prediction = generate_price_prediction(hist_data, forecast_days_int, model_type)
             
             # Set currency based on whether it's an Indian stock
             currency = "₹" if is_indian else "$"
