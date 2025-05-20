@@ -1,0 +1,206 @@
+/* Modern Gen-Z Style for MoneyMitra */
+
+/* Main title styling */
+.main-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #FF6B1A, #FF3864);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+    font-size: 3rem;
+    letter-spacing: -0.05em;
+}
+
+/* Subtitle styling */
+.subtitle {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    color: #2D3047;
+    letter-spacing: 0.02em;
+}
+
+/* Card styling for dashboard elements */
+.card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid #FF6B1A;
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Metric styling */
+.metric-container {
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.1), rgba(255, 107, 26, 0.05));
+    padding: 1rem;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2D3047;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #71717a;
+}
+
+/* Navigation and tabs styling */
+div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+    background-color: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #2D3047;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: background-color 0.2s ease;
+}
+
+div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+    background-color: rgba(255, 107, 26, 0.1);
+}
+
+div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"][data-baseweb="tab"][aria-selected="true"] {
+    background-color: #FF6B1A;
+    color: white;
+}
+
+/* Chart enhancements */
+div[data-testid="stChart"] {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Modern inputs */
+div[data-testid="stTextInput"] input {
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+
+div[data-testid="stTextInput"] input:focus {
+    border-color: #FF6B1A;
+    box-shadow: 0 0 0 2px rgba(255, 107, 26, 0.2);
+}
+
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+    background-color: #F9F9FF;
+    border-right: none;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 2rem 0;
+    color: #71717a;
+    font-size: 0.8rem;
+}
+
+/* Background gradient */
+.stApp {
+    background: linear-gradient(135deg, #ffffff, #f9f9ff);
+}
+
+/* Custom badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-right: 0.5rem;
+}
+
+.badge-green {
+    background-color: rgba(0, 200, 83, 0.15);
+    color: #00C853;
+}
+
+.badge-red {
+    background-color: rgba(229, 57, 53, 0.15);
+    color: #E53935;
+}
+
+.badge-blue {
+    background-color: rgba(33, 150, 243, 0.15);
+    color: #2196F3;
+}
+
+.badge-orange {
+    background-color: rgba(255, 107, 26, 0.15);
+    color: #FF6B1A;
+}
+
+/* News card */
+.news-card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 4px solid #FF6B1A;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: white;
+}
+
+.news-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Stock price prediction */
+.prediction-container {
+    border-radius: 15px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.05), rgba(45, 48, 71, 0.05));
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+/* Tooltip styling */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: #2D3047;
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.75rem;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
