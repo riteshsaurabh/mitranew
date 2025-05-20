@@ -435,7 +435,28 @@ with main_tabs[2]:
     with statement_tabs[0]:
         income_statement = utils.get_income_statement(stock_symbol)
         if not income_statement.empty:
-            st.write("All figures in millions USD")
+            # Format dates to remove timestamp - handle DatetimeIndex properly
+            try:
+                if isinstance(income_statement.index, pd.DatetimeIndex):
+                    income_statement.index = income_statement.index.strftime('%Y-%m-%d')
+                else:
+                    # Try to convert to datetime first if it's not already
+                    income_statement.index = pd.to_datetime(income_statement.index).strftime('%Y-%m-%d')
+            except:
+                # If we can't format the dates, we'll keep the original index
+                pass
+            
+            # Display currency based on stock type
+            if is_indian:
+                st.write("All figures in millions ₹")
+                # Convert to INR if it's an Indian stock (approximate conversion)
+                income_statement = income_statement * 83.0  # Using fixed conversion rate
+            else:
+                st.write("All figures in millions $")
+                
+            # Format all numeric values to 2 decimal places
+            income_statement = income_statement.round(2)
+            
             st.dataframe(income_statement)
         else:
             st.write("Income statement data not available for this stock.")
@@ -443,7 +464,28 @@ with main_tabs[2]:
     with statement_tabs[1]:
         balance_sheet = utils.get_balance_sheet(stock_symbol)
         if not balance_sheet.empty:
-            st.write("All figures in millions USD")
+            # Format dates to remove timestamp - handle DatetimeIndex properly
+            try:
+                if isinstance(balance_sheet.index, pd.DatetimeIndex):
+                    balance_sheet.index = balance_sheet.index.strftime('%Y-%m-%d')
+                else:
+                    # Try to convert to datetime first if it's not already
+                    balance_sheet.index = pd.to_datetime(balance_sheet.index).strftime('%Y-%m-%d')
+            except:
+                # If we can't format the dates, we'll keep the original index
+                pass
+            
+            # Display currency based on stock type
+            if is_indian:
+                st.write("All figures in millions ₹")
+                # Convert to INR if it's an Indian stock (approximate conversion)
+                balance_sheet = balance_sheet * 83.0  # Using fixed conversion rate
+            else:
+                st.write("All figures in millions $")
+                
+            # Format all numeric values to 2 decimal places
+            balance_sheet = balance_sheet.round(2)
+            
             st.dataframe(balance_sheet)
         else:
             st.write("Balance sheet data not available for this stock.")
@@ -451,7 +493,28 @@ with main_tabs[2]:
     with statement_tabs[2]:
         cash_flow = utils.get_cash_flow(stock_symbol)
         if not cash_flow.empty:
-            st.write("All figures in millions USD")
+            # Format dates to remove timestamp - make sure to handle DatetimeIndex properly
+            try:
+                if isinstance(cash_flow.index, pd.DatetimeIndex):
+                    cash_flow.index = cash_flow.index.strftime('%Y-%m-%d')
+                else:
+                    # Try to convert to datetime first if it's not already
+                    cash_flow.index = pd.to_datetime(cash_flow.index).strftime('%Y-%m-%d')
+            except:
+                # If we can't format the dates, we'll keep the original index
+                pass
+                
+            # Display currency based on stock type
+            if is_indian:
+                st.write("All figures in millions ₹")
+                # Convert to INR if it's an Indian stock (approximate conversion)
+                cash_flow = cash_flow * 83.0  # Using fixed conversion rate
+            else:
+                st.write("All figures in millions $")
+                
+            # Format all numeric values to 2 decimal places
+            cash_flow = cash_flow.round(2)
+            
             st.dataframe(cash_flow)
         else:
             st.write("Cash flow data not available for this stock.")
