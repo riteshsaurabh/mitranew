@@ -522,6 +522,29 @@ def get_cash_flow(ticker):
         print(f"Error fetching cash flow statement: {e}")
         return pd.DataFrame()
 
+def find_value_in_statement(statement, possible_keys, column, default=0):
+    """
+    Search for any of the possible keys in the financial statement and return its value
+    
+    Args:
+        statement (pd.DataFrame): Financial statement
+        possible_keys (list): List of possible keys to search for
+        column (str): Column name to get value from
+        default (float): Default value if no key is found
+        
+    Returns:
+        float: Found value or default
+    """
+    for key in possible_keys:
+        if key in statement.index:
+            try:
+                val = statement.loc[key, column]
+                if isinstance(val, (int, float)) and not pd.isna(val):
+                    return val
+            except:
+                continue
+    return default
+    
 def display_metrics_cards(metrics_data, section_title="", is_indian=False):
     """
     Display financial metrics in a modern card layout
