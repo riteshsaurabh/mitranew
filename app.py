@@ -445,28 +445,18 @@ with main_tabs[2]:
                 # If we can't format the dates, we'll keep the original index
                 pass
             
-            # Display currency based on stock type
+            # Display currency and formatting
             if is_indian:
-                # Convert to INR if it's an Indian stock (approximate conversion)
-                income_statement = income_statement * 83.0  # Using fixed conversion rate
-                
-                # For Indian stocks, we'll display in thousands (K)
-                st.write("All figures in ₹ K (thousands)")
-                
-                # Format values to Indian system with commas, in thousands
-                for col in income_statement.columns:
-                    income_statement[col] = income_statement[col].apply(
-                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_lakhs=False, in_crores=False)
-                    )
+                st.write("All figures in ₹")
             else:
-                st.write("All figures in millions $")
+                st.write("All figures in $")
                 
-                # Format all numeric values to 2 decimal places with commas for readability
-                income_statement = income_statement.round(2)
-                for col in income_statement.columns:
-                    income_statement[col] = income_statement[col].apply(
-                        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
-                    )
+            # Format values with proper commas for number display
+            for col in income_statement.columns:
+                income_statement[col] = income_statement[col].apply(
+                    lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
+                              (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
+                )
             
             st.dataframe(income_statement)
         else:
@@ -486,28 +476,18 @@ with main_tabs[2]:
                 # If we can't format the dates, we'll keep the original index
                 pass
             
-            # Display currency based on stock type
+            # Display currency and formatting
             if is_indian:
-                # Convert to INR if it's an Indian stock (approximate conversion)
-                balance_sheet = balance_sheet * 83.0  # Using fixed conversion rate
-                
-                # For Indian stocks, we'll display in thousands (K)
-                st.write("All figures in ₹ K (thousands)")
-                
-                # Format values to Indian system with commas, in thousands
-                for col in balance_sheet.columns:
-                    balance_sheet[col] = balance_sheet[col].apply(
-                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_lakhs=False, in_crores=False)
-                    )
+                st.write("All figures in ₹")
             else:
-                st.write("All figures in millions $")
+                st.write("All figures in $")
                 
-                # Format all numeric values to 2 decimal places with commas for readability
-                balance_sheet = balance_sheet.round(2)
-                for col in balance_sheet.columns:
-                    balance_sheet[col] = balance_sheet[col].apply(
-                        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
-                    )
+            # Format values with proper commas for number display
+            for col in balance_sheet.columns:
+                balance_sheet[col] = balance_sheet[col].apply(
+                    lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
+                              (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
+                )
             
             st.dataframe(balance_sheet)
         else:
@@ -527,28 +507,18 @@ with main_tabs[2]:
                 # If we can't format the dates, we'll keep the original index
                 pass
                 
-            # Display currency based on stock type
+            # Display currency and formatting
             if is_indian:
-                # Convert to INR if it's an Indian stock (approximate conversion)
-                cash_flow = cash_flow * 83.0  # Using fixed conversion rate
-                
-                # For Indian stocks, we'll display in thousands (K)
-                st.write("All figures in ₹ K (thousands)")
-                
-                # Format values to Indian system with commas, in thousands
-                for col in cash_flow.columns:
-                    cash_flow[col] = cash_flow[col].apply(
-                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_lakhs=False, in_crores=False)
-                    )
+                st.write("All figures in ₹")
             else:
-                st.write("All figures in millions $")
+                st.write("All figures in $")
                 
-                # Format all numeric values to 2 decimal places with commas for readability
-                cash_flow = cash_flow.round(2)
-                for col in cash_flow.columns:
-                    cash_flow[col] = cash_flow[col].apply(
-                        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
-                    )
+            # Format values with proper commas for number display
+            for col in cash_flow.columns:
+                cash_flow[col] = cash_flow[col].apply(
+                    lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
+                              (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
+                )
             
             st.dataframe(cash_flow)
         else:
