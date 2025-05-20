@@ -530,10 +530,10 @@ def find_value_in_statement(statement, possible_keys, column, default=0):
         statement (pd.DataFrame): Financial statement
         possible_keys (list): List of possible keys to search for
         column (str): Column name to get value from
-        default (float): Default value if no key is found
+        default: Default value if no key is found (can be None or a number)
         
     Returns:
-        float: Found value or default
+        float or None: Found value or default
     """
     for key in possible_keys:
         if key in statement.index:

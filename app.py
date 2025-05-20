@@ -482,7 +482,7 @@ with main_tabs[2]:
             st.write("Consolidated Figures in $ Millions / View Standalone")
         
         # Fetch the real balance sheet data from Yahoo Finance
-        full_balance_sheet = utils.get_balance_sheet(ticker_symbol)
+        full_balance_sheet = utils.get_balance_sheet(stock_symbol)
         
         if not full_balance_sheet.empty:
             try:
