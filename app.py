@@ -211,7 +211,6 @@ main_tabs = st.tabs([
     "📈 Price Analysis", 
     "📃 Financial Statements", 
     "📰 News & Sentiment", 
-    "🔮 Predictions", 
     "👥 Peer Comparison", 
     "📋 SWOT Analysis"
 ])
@@ -632,18 +631,10 @@ with main_tabs[3]:
         # Display stock news
         stock_news.display_news(stock_symbol)
 
-# Predictions Tab
-with main_tabs[4]:
-    # Price prediction section
-    stock_prediction.display_prediction_section(
-        stock_symbol,
-        stock_data,
-        company_info.get('shortName', stock_symbol),
-        is_indian
-    )
+# Note: Predictions tab removed as requested
 
 # Peer Comparison Tab
-with main_tabs[5]:
+with main_tabs[4]:
     # Peer comparison section
     st.header("Peer Comparison")
     
@@ -750,7 +741,7 @@ with main_tabs[5]:
         st.error(f"Error generating peer comparison: {str(e)}")
 
 # SWOT Analysis Tab
-with main_tabs[6]:
+with main_tabs[5]:
     # SWOT Analysis section
     st.header("SWOT Analysis")
     st.write(f"Strategic analysis for {company_info.get('shortName', stock_symbol)}")
