@@ -232,24 +232,43 @@ def extract_valuation_metrics(info):
     valuation = {}
     
     # Price multiples
-    valuation['trailingPE'] = info.get('trailingPE')
-    valuation['forwardPE'] = info.get('forwardPE')
-    valuation['pegRatio'] = info.get('pegRatio')
-    valuation['priceToSalesTrailing12Months'] = info.get('priceToSalesTrailing12Months')
-    valuation['priceToBook'] = info.get('priceToBook')
+    trailingPE = info.get('trailingPE')
+    valuation['trailingPE'] = format_utils.format_number(trailingPE) if trailingPE is not None else "N/A"
+    
+    forwardPE = info.get('forwardPE')
+    valuation['forwardPE'] = format_utils.format_number(forwardPE) if forwardPE is not None else "N/A"
+    
+    pegRatio = info.get('pegRatio')
+    valuation['pegRatio'] = format_utils.format_number(pegRatio) if pegRatio is not None else "N/A"
+    
+    priceToSales = info.get('priceToSalesTrailing12Months')
+    valuation['priceToSalesTrailing12Months'] = format_utils.format_number(priceToSales) if priceToSales is not None else "N/A"
+    
+    priceToBook = info.get('priceToBook')
+    valuation['priceToBook'] = format_utils.format_number(priceToBook) if priceToBook is not None else "N/A"
     
     # Enterprise value multiples
-    valuation['enterpriseToRevenue'] = info.get('enterpriseToRevenue')
-    valuation['enterpriseToEbitda'] = info.get('enterpriseToEbitda')
-    valuation['enterpriseToEbit'] = info.get('enterpriseToEbit', None)  # May not be available
-    valuation['enterpriseToFcf'] = info.get('enterpriseToFcf', None)    # May not be available
+    enterpriseToRevenue = info.get('enterpriseToRevenue')
+    valuation['enterpriseToRevenue'] = format_utils.format_number(enterpriseToRevenue) if enterpriseToRevenue is not None else "N/A"
+    
+    enterpriseToEbitda = info.get('enterpriseToEbitda')
+    valuation['enterpriseToEbitda'] = format_utils.format_number(enterpriseToEbitda) if enterpriseToEbitda is not None else "N/A"
+    
+    enterpriseToEbit = info.get('enterpriseToEbit')
+    valuation['enterpriseToEbit'] = format_utils.format_number(enterpriseToEbit) if enterpriseToEbit is not None else "N/A"
+    
+    enterpriseToFcf = info.get('enterpriseToFcf')
+    valuation['enterpriseToFcf'] = format_utils.format_number(enterpriseToFcf) if enterpriseToFcf is not None else "N/A"
     
     # Dividend metrics
-    valuation['dividendYield'] = info.get('dividendYield', 0)
-    valuation['payoutRatio'] = info.get('payoutRatio', 0)
+    dividendYield = info.get('dividendYield', 0)
+    valuation['dividendYield'] = format_utils.format_percent(dividendYield) if dividendYield is not None else "0.00%"
+    
+    payoutRatio = info.get('payoutRatio', 0)
+    valuation['payoutRatio'] = format_utils.format_percent(payoutRatio) if payoutRatio is not None else "0.00%"
     
     # These are typically not available directly from yfinance
-    valuation['dividendGrowth5Y'] = None
-    valuation['dividendGrowthYears'] = None
+    valuation['dividendGrowth5Y'] = "N/A"
+    valuation['dividendGrowthYears'] = "N/A"
     
     return valuation
