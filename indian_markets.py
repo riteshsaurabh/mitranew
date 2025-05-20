@@ -197,7 +197,7 @@ def format_inr(amount):
         amount: Number to format
     
     Returns:
-        str: Formatted amount in INR notation
+        str: Formatted amount in INR notation with exactly 2 decimal places
     """
     if not isinstance(amount, (int, float)):
         return "N/A"
