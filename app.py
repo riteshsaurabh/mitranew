@@ -430,7 +430,7 @@ with main_tabs[2]:
     # Financial statements section
     st.header("Financial Statements")
     
-    statement_tabs = st.tabs(["Income Statement", "Balance Sheet", "Cash Flow"])
+    statement_tabs = st.tabs(["Income Statement", "Balance Sheet", "Cash Flow", "Profit & Loss"])
     
     with statement_tabs[0]:
         st.subheader("Income Statement")
