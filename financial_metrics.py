@@ -156,49 +156,62 @@ def calculate_performance_metrics(hist_data, info):
         naive_dates = hist_data.index.tz_localize(None) if hist_data.index.tz is not None else hist_data.index
         ytd_data = hist_data[naive_dates >= ytd_start]
         if not ytd_data.empty:
-            performance['ytd'] = ((latest_close / ytd_data['Close'].iloc[0]) - 1) * 100
+            ytd_return = ((latest_close / ytd_data['Close'].iloc[0]) - 1)
+            performance['ytd'] = format_utils.format_percent(ytd_return)
         
         # 1 year return (252 trading days)
         if len(hist_data) > 252:
-            performance['oneYear'] = ((latest_close / hist_data['Close'].iloc[-253]) - 1) * 100
+            one_year_return = ((latest_close / hist_data['Close'].iloc[-253]) - 1)
+            performance['oneYear'] = format_utils.format_percent(one_year_return)
         
         # 2 year return (504 trading days)
         if len(hist_data) > 504:
-            performance['twoYear'] = ((latest_close / hist_data['Close'].iloc[-505]) - 1) * 100
+            two_year_return = ((latest_close / hist_data['Close'].iloc[-505]) - 1)
+            performance['twoYear'] = format_utils.format_percent(two_year_return)
         
         # 3 year return (756 trading days)
         if len(hist_data) > 756:
-            performance['threeYear'] = ((latest_close / hist_data['Close'].iloc[-757]) - 1) * 100
+            three_year_return = ((latest_close / hist_data['Close'].iloc[-757]) - 1)
+            performance['threeYear'] = format_utils.format_percent(three_year_return)
         
         # 5 year return (1260 trading days)
         if len(hist_data) > 1260:
-            performance['fiveYear'] = ((latest_close / hist_data['Close'].iloc[-1261]) - 1) * 100
+            five_year_return = ((latest_close / hist_data['Close'].iloc[-1261]) - 1)
+            performance['fiveYear'] = format_utils.format_percent(five_year_return)
         
         # 10 year return (2520 trading days)
         if len(hist_data) > 2520:
-            performance['tenYear'] = ((latest_close / hist_data['Close'].iloc[-2521]) - 1) * 100
+            ten_year_return = ((latest_close / hist_data['Close'].iloc[-2521]) - 1)
+            performance['tenYear'] = format_utils.format_percent(ten_year_return)
         
         # Max period return
-        performance['max'] = ((latest_close / hist_data['Close'].iloc[0]) - 1) * 100
+        max_return = ((latest_close / hist_data['Close'].iloc[0]) - 1)
+        performance['max'] = format_utils.format_percent(max_return)
         
         # Volatility metrics
-        performance['beta'] = info.get('beta')
+        beta = info.get('beta')
+        performance['beta'] = format_utils.format_number(beta) if beta is not None else "N/A"
         
         # Standard deviation of returns (annualized)
         one_year_data = hist_data.iloc[-252:]
         daily_returns = one_year_data['Close'].pct_change().dropna()
-        performance['std1Y'] = daily_returns.std() * np.sqrt(252) * 100
+        std_1y = daily_returns.std() * np.sqrt(252)
+        performance['std1Y'] = format_utils.format_percent(std_1y)
         
         # Maximum drawdown over 1 year
         rolling_max = one_year_data['Close'].cummax()
-        drawdown = (one_year_data['Close'] / rolling_max - 1.0) * 100
-        performance['maxDrawdown'] = drawdown.min()
+        drawdown = (one_year_data['Close'] / rolling_max - 1.0)
+        min_drawdown = drawdown.min()
+        performance['maxDrawdown'] = format_utils.format_percent(min_drawdown)
         
         # Sharpe ratio (assuming risk-free rate of 2%)
         risk_free_rate = 0.02
-        excess_return = (performance.get('oneYear', 0) / 100) - risk_free_rate
-        if performance.get('std1Y'):
-            performance['sharpeRatio'] = excess_return / (performance['std1Y'] / 100)
+        # Get oneYear as a number, not as a formatted string
+        one_year_return_value = ((latest_close / hist_data['Close'].iloc[-253]) - 1) if len(hist_data) > 252 else 0
+        excess_return = one_year_return_value - risk_free_rate
+        if daily_returns.std() * np.sqrt(252) > 0:
+            sharpe = excess_return / (daily_returns.std() * np.sqrt(252))
+            performance['sharpeRatio'] = format_utils.format_number(sharpe)
         
     except Exception as e:
         print(f"Error calculating performance metrics: {e}")
