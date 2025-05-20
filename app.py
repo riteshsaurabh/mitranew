@@ -1,4 +1,13 @@
+# Set page configuration - must be the first Streamlit command
 import streamlit as st
+st.set_page_config(
+    page_title="MoneyMitra - Your Financial Mitra",
+    page_icon="💰",
+    layout="centered",  # Using centered layout for medium mode
+    initial_sidebar_state="expanded",
+)
+
+# Then import other libraries
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
@@ -10,6 +19,10 @@ import simple_watchlist
 import indian_markets
 import stock_news
 import stock_prediction
+
+# Load custom CSS
+with open('style.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 # Function to get peer stock symbols based on sector
 def get_peer_symbols(symbol, sector, is_indian=False):

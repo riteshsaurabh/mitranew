@@ -1,16 +1,17 @@
-/* Modern Gen-Z Style for MoneyMitra */
+/* Futuristic Gen-Z Style for MoneyMitra with Royal Blue, Teal Blue, and Orange theme */
 
 /* Main title styling */
 .main-title {
     font-family: 'Poppins', sans-serif;
     font-weight: 800;
     text-transform: uppercase;
-    background: linear-gradient(90deg, #FF6B1A, #FF3864);
+    background: linear-gradient(90deg, #FF6B1A, #19398A);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
     font-size: 3rem;
     letter-spacing: -0.05em;
+    text-shadow: 0 2px 10px rgba(25, 57, 138, 0.2);
 }
 
 /* Subtitle styling */
@@ -19,7 +20,7 @@
     font-weight: 400;
     font-size: 1.2rem;
     margin-bottom: 2rem;
-    color: #2D3047;
+    color: #19398A;
     letter-spacing: 0.02em;
 }
 
@@ -37,28 +38,30 @@
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 25px rgba(25, 57, 138, 0.1);
+    border-left: 4px solid #19398A;
 }
 
 /* Metric styling */
 .metric-container {
-    background: linear-gradient(135deg, rgba(255, 107, 26, 0.1), rgba(255, 107, 26, 0.05));
+    background: linear-gradient(135deg, rgba(25, 57, 138, 0.05), rgba(78, 205, 196, 0.1));
     padding: 1rem;
     border-radius: 12px;
     text-align: center;
+    border-bottom: 3px solid #4ECDC4;
 }
 
 .metric-value {
     font-size: 1.8rem;
     font-weight: 700;
-    color: #2D3047;
+    color: #19398A;
 }
 
 .metric-label {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #71717a;
+    color: #4ECDC4;
 }
 
 /* Navigation and tabs styling */
@@ -66,19 +69,21 @@ div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[k
     background-color: transparent;
     border: none;
     border-radius: 8px;
-    color: #2D3047;
+    color: #19398A;
     font-weight: 600;
     padding: 0.5rem 1rem;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-    background-color: rgba(255, 107, 26, 0.1);
+    background-color: rgba(78, 205, 196, 0.1);
+    transform: translateY(-2px);
 }
 
 div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"][data-baseweb="tab"][aria-selected="true"] {
     background-color: #FF6B1A;
     color: white;
+    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
 }
 
 /* Chart enhancements */
@@ -86,24 +91,27 @@ div[data-testid="stChart"] {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(78, 205, 196, 0.2);
 }
 
 /* Modern inputs */
 div[data-testid="stTextInput"] input {
     border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(25, 57, 138, 0.2);
     padding: 0.5rem 1rem;
     font-size: 1rem;
+    transition: all 0.3s ease;
 }
 
 div[data-testid="stTextInput"] input:focus {
-    border-color: #FF6B1A;
-    box-shadow: 0 0 0 2px rgba(255, 107, 26, 0.2);
+    border-color: #4ECDC4;
+    box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Sidebar styling */
 section[data-testid="stSidebar"] {
-    background-color: #F9F9FF;
+    background-color: #E6F3F5;
     border-right: none;
 }
 
@@ -111,13 +119,13 @@ section[data-testid="stSidebar"] {
 .footer {
     text-align: center;
     padding: 2rem 0;
-    color: #71717a;
+    color: #19398A;
     font-size: 0.8rem;
 }
 
 /* Background gradient */
 .stApp {
-    background: linear-gradient(135deg, #ffffff, #f9f9ff);
+    background: linear-gradient(135deg, #ffffff, #E6F3F5);
 }
 
 /* Custom badges */
@@ -129,11 +137,12 @@ section[data-testid="stSidebar"] {
     font-weight: 600;
     text-transform: uppercase;
     margin-right: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .badge-green {
-    background-color: rgba(0, 200, 83, 0.15);
-    color: #00C853;
+    background-color: rgba(78, 205, 196, 0.15);
+    color: #4ECDC4;
 }
 
 .badge-red {
@@ -142,8 +151,8 @@ section[data-testid="stSidebar"] {
 }
 
 .badge-blue {
-    background-color: rgba(33, 150, 243, 0.15);
-    color: #2196F3;
+    background-color: rgba(25, 57, 138, 0.15);
+    color: #19398A;
 }
 
 .badge-orange {
@@ -155,25 +164,55 @@ section[data-testid="stSidebar"] {
 .news-card {
     border-radius: 12px;
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.3s ease;
     border-left: 4px solid #FF6B1A;
     margin-bottom: 1rem;
     padding: 1rem;
     background: white;
+    box-shadow: 0 4px 6px rgba(25, 57, 138, 0.05);
 }
 
 .news-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 15px rgba(25, 57, 138, 0.1);
+    border-left: 4px solid #4ECDC4;
+}
+
+/* News source badge */
+.news-source {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #19398A;
+    background-color: rgba(78, 205, 196, 0.1);
+    padding: 0.15rem 0.5rem;
+    border-radius: 30px;
+    margin-right: 0.5rem;
 }
 
 /* Stock price prediction */
 .prediction-container {
     border-radius: 15px;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(255, 107, 26, 0.05), rgba(45, 48, 71, 0.05));
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.05), rgba(25, 57, 138, 0.05));
     padding: 1.5rem;
     margin-top: 1rem;
+    border: 1px solid rgba(78, 205, 196, 0.2);
+    box-shadow: 0 10px 25px rgba(25, 57, 138, 0.05);
+}
+
+/* Prediction confidence band styling */
+.prediction-band-high {
+    fill: rgba(78, 205, 196, 0.1);
+    stroke: rgba(78, 205, 196, 0.5);
+    stroke-width: 1;
+}
+
+.prediction-band-low {
+    fill: rgba(255, 107, 26, 0.1);
+    stroke: rgba(255, 107, 26, 0.5);
+    stroke-width: 1;
 }
 
 /* Tooltip styling */
@@ -185,22 +224,103 @@ section[data-testid="stSidebar"] {
 
 .tooltip .tooltiptext {
     visibility: hidden;
-    background-color: #2D3047;
+    background-color: #19398A;
     color: white;
     text-align: center;
-    border-radius: 6px;
-    padding: 5px 10px;
+    border-radius: 8px;
+    padding: 8px 12px;
     position: absolute;
     z-index: 1;
     bottom: 125%;
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: all 0.3s;
     font-size: 0.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-left: 3px solid #FF6B1A;
 }
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* Animate stock sparklines */
+@keyframes drawLine {
+    from {
+        stroke-dashoffset: 1000;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.sparkline path {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawLine 1.5s ease-in-out forwards;
+}
+
+/* Custom tabs styling */
+.custom-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.custom-tab {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    background-color: rgba(230, 243, 245, 0.8);
+    color: #19398A;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 1px solid transparent;
+}
+
+.custom-tab:hover {
+    background-color: rgba(78, 205, 196, 0.1);
+    transform: translateY(-2px);
+}
+
+.custom-tab.active {
+    background-color: #FF6B1A;
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
+}
+
+/* Modern table styling */
+div[data-testid="stTable"] table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+div[data-testid="stTable"] th {
+    background-color: rgba(25, 57, 138, 0.05);
+    color: #19398A;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 2px solid rgba(78, 205, 196, 0.2);
+}
+
+div[data-testid="stTable"] td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(78, 205, 196, 0.1);
+}
+
+div[data-testid="stTable"] tr:last-child td {
+    border-bottom: none;
+}
+
+div[data-testid="stTable"] tr:hover td {
+    background-color: rgba(78, 205, 196, 0.05);
 }

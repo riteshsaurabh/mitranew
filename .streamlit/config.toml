@@ -2,38 +2,26 @@
 headless = true
 address = "0.0.0.0"
 port = 5000
+maxUploadSize = 10
+maxMessageSize = 200
 
-# Theme Option 1: Professional Blue-Gold (Currently Disabled)
-# [theme]
-# Primary accent color for interactive elements
-# primaryColor = "#0063B2"  # Deep Blue
-# Background color for the main content area
-# backgroundColor = "#FFFFFF"  # White
-# Background color for sidebar and most interactive widgets 
-# secondaryBackgroundColor = "#F0F8FF"  # Light Blue
-# Color used for almost all text
-# textColor = "#333333"  # Dark Gray
-# Font family for all text in the app, except code blocks
-# font = "sans-serif"
+[browser]
+gatherUsageStats = false
 
-# Other theme options are commented out below.
-# To use a different theme, comment out the current theme and uncomment one below
+[client]
+toolbarMode = "minimal"
 
-# Theme Option 2: Modern Green Finance
-# [theme]
-# primaryColor = "#007755"  # Deep Green
-# backgroundColor = "#FFFFFF"  # White  
-# secondaryBackgroundColor = "#F5FFF9"  # Mint Green
-# textColor = "#1E1E1E"  # Almost Black
-# font = "sans-serif"
-
-# Theme Option 3: Vibrant Orange-Blue (Currently Active)
+# Theme Option 3: Royal Blue, Teal Blue, and Orange (Currently Active)
 [theme]
 primaryColor = "#FF6B1A"  # Vibrant Orange
 backgroundColor = "#FFFFFF"  # White
-secondaryBackgroundColor = "#F9F9FF"  # Very Light Blue
-textColor = "#2D3047"  # Navy Blue
+secondaryBackgroundColor = "#E6F3F5"  # Light Teal Blue
+textColor = "#19398A"  # Royal Blue
 font = "sans-serif"
+
+[runner]
+# Enable magic commands
+magicEnabled = true
 
 # Theme Option 4: Dark Mode Finance
 # [theme]
