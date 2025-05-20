@@ -19,6 +19,7 @@ import simple_watchlist
 import indian_markets
 import stock_news
 import stock_prediction
+import sentiment_tracker
 
 # Load custom CSS
 with open('style.css') as f:
@@ -211,6 +212,7 @@ with st.spinner(f"Loading data for {stock_symbol}..."):
 main_tabs = st.tabs([
     "📊 Overview", 
     "📈 Price Analysis", 
+    "🧠 Mood Tracker",  # New emoji-based sentiment tab
     "📃 Financial Statements", 
     "📰 News & Sentiment", 
     "🔮 Predictions", 
