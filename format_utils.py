@@ -131,7 +131,10 @@ def format_indian_numbers(num, decimal_places=2, in_lakhs=False, in_crores=False
     formatted_num = f"{num:.{decimal_places}f}"
     
     # Split the number into integer and decimal parts
-    integer_part, decimal_part = formatted_num.split(".")
+    # Handle cases where there might not be a decimal part
+    parts = formatted_num.split(".")
+    integer_part = parts[0]
+    decimal_part = parts[1] if len(parts) > 1 else "00"
     
     # Format the integer part with Indian style commas
     # (e.g., 10,00,00,000 instead of 100,000,000)
