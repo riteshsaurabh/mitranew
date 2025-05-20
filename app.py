@@ -455,25 +455,19 @@ with main_tabs[2]:
             # Numbers should be formatted with commas but no decimal places for large numbers
             formatted_statement = income_statement.copy()
             
+            # Format all numeric values for better readability
             for col in formatted_statement.columns:
                 formatted_statement[col] = formatted_statement[col].apply(
                     lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
                               (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
                 )
             
-            # Add a "Breakdown" column to identify the rows
+            # Display the financial data using Streamlit's dataframe
+            # No need to add a breakdown column as it's already the index in the non-transposed format
             if not formatted_statement.empty:
-                # Create a new DataFrame with the column name as first column
-                breakdown_df = pd.DataFrame({'Breakdown': formatted_statement.index})
-                
-                # Concatenate with the formatted data
-                display_df = pd.concat([breakdown_df, formatted_statement], axis=1)
-                
-                # Display using Streamlit's dataframe
                 st.dataframe(
-                    display_df,
-                    use_container_width=True,
-                    hide_index=True
+                    formatted_statement,
+                    use_container_width=True
                 )
         else:
             st.write("Income statement data not available for this stock.")
@@ -502,25 +496,19 @@ with main_tabs[2]:
             # Numbers should be formatted with commas but no decimal places for large numbers
             formatted_statement = balance_sheet.copy()
             
+            # Format all numeric values for better readability
             for col in formatted_statement.columns:
                 formatted_statement[col] = formatted_statement[col].apply(
                     lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
                               (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
                 )
             
-            # Add a "Breakdown" column to identify the rows
+            # Display the financial data using Streamlit's dataframe
+            # No need to add a breakdown column as it's already the index in the non-transposed format
             if not formatted_statement.empty:
-                # Create a new DataFrame with the column name as first column
-                breakdown_df = pd.DataFrame({'Breakdown': formatted_statement.index})
-                
-                # Concatenate with the formatted data
-                display_df = pd.concat([breakdown_df, formatted_statement], axis=1)
-                
-                # Display using Streamlit's dataframe
                 st.dataframe(
-                    display_df,
-                    use_container_width=True,
-                    hide_index=True
+                    formatted_statement,
+                    use_container_width=True
                 )
         else:
             st.write("Balance sheet data not available for this stock.")
@@ -549,25 +537,19 @@ with main_tabs[2]:
             # Numbers should be formatted with commas but no decimal places for large numbers
             formatted_statement = cash_flow.copy()
             
+            # Format all numeric values for better readability
             for col in formatted_statement.columns:
                 formatted_statement[col] = formatted_statement[col].apply(
                     lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
                               (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
                 )
             
-            # Add a "Breakdown" column to identify the rows
+            # Display the financial data using Streamlit's dataframe
+            # No need to add a breakdown column as it's already the index in the non-transposed format
             if not formatted_statement.empty:
-                # Create a new DataFrame with the column name as first column
-                breakdown_df = pd.DataFrame({'Breakdown': formatted_statement.index})
-                
-                # Concatenate with the formatted data
-                display_df = pd.concat([breakdown_df, formatted_statement], axis=1)
-                
-                # Display using Streamlit's dataframe
                 st.dataframe(
-                    display_df,
-                    use_container_width=True,
-                    hide_index=True
+                    formatted_statement,
+                    use_container_width=True
                 )
         else:
             st.write("Cash flow data not available for this stock.")

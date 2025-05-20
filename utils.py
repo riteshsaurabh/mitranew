@@ -382,7 +382,7 @@ def get_income_statement(ticker):
         ticker (str): Stock ticker symbol
     
     Returns:
-        pandas.DataFrame: Income statement data
+        pandas.DataFrame: Income statement data, properly formatted with dates as rows and items as columns
     """
     try:
         stock = yf.Ticker(ticker)
@@ -397,29 +397,30 @@ def get_income_statement(ticker):
         # Choose the most complete data source available
         if not income_stmt.empty and len(income_stmt.columns) > 0:
             # Use income_stmt if it's available and has data
-            result = income_stmt.T
+            # Don't transpose - we want items as columns and dates as rows to match the screenshot
+            result = income_stmt
         elif not financials.empty and len(financials.columns) > 0:
             # Fall back to financials if income_stmt is not available
-            result = financials.T
+            result = financials
         else:
             # Last resort, try quarterly financials
             quarterly = stock.quarterly_financials
             if not quarterly.empty and len(quarterly.columns) > 0:
-                result = quarterly.T
+                result = quarterly
             else:
                 return pd.DataFrame()
         
-        # Make sure index is properly formatted
-        if isinstance(result.index, pd.DatetimeIndex):
-            result.index = result.index.strftime('%m/%d/%Y')
-            
-        # Add TTM (Trailing Twelve Months) column for more complete display
-        if len(result) > 0:
+        # Format column names (dates) to be properly formatted
+        if isinstance(result.columns, pd.DatetimeIndex):
+            result.columns = result.columns.strftime('%m/%d/%Y')
+        
+        # Sort columns to match the screenshot format (newest data on left)
+        result = result.sort_index(axis=1, ascending=False)
+        
+        # Add a TTM column for more complete display
+        if len(result.columns) > 0:
             # Create a TTM column based on most recent data
             result['TTM'] = result.iloc[:, 0]
-        
-        # Sort index to match the screenshot format (newest data on left)
-        result = result.sort_index(ascending=False)
         
         return result
         
@@ -436,7 +437,7 @@ def get_balance_sheet(ticker):
         ticker (str): Stock ticker symbol
     
     Returns:
-        pandas.DataFrame: Balance sheet data
+        pandas.DataFrame: Balance sheet data, with items as rows and dates as columns
     """
     try:
         stock = yf.Ticker(ticker)
@@ -446,25 +447,27 @@ def get_balance_sheet(ticker):
         
         # Choose the most complete data source
         if not balance_sheet.empty and len(balance_sheet.columns) > 0:
-            result = balance_sheet.T
+            # Don't transpose - we want items as rows and dates as columns to match the screenshot
+            result = balance_sheet
         else:
             # Try the quarterly balance sheet
             quarterly_bs = stock.quarterly_balance_sheet
             if not quarterly_bs.empty and len(quarterly_bs.columns) > 0:
-                result = quarterly_bs.T
+                result = quarterly_bs
             else:
                 return pd.DataFrame()
         
-        # Format the index to match the screenshot format
-        if isinstance(result.index, pd.DatetimeIndex):
-            result.index = result.index.strftime('%m/%d/%Y')
+        # Format column names (dates) to be properly formatted
+        if isinstance(result.columns, pd.DatetimeIndex):
+            result.columns = result.columns.strftime('%m/%d/%Y')
         
-        # Add a TTM column for consistency with income statement
-        if len(result) > 0:
+        # Sort columns to match the format (newest data on left)
+        result = result.sort_index(axis=1, ascending=False)
+        
+        # Add a TTM column for more complete display
+        if len(result.columns) > 0:
+            # Create a TTM column based on most recent data
             result['TTM'] = result.iloc[:, 0]
-        
-        # Sort to match screenshot format (newest data on left)
-        result = result.sort_index(ascending=False)
         
         return result
         
@@ -481,7 +484,7 @@ def get_cash_flow(ticker):
         ticker (str): Stock ticker symbol
     
     Returns:
-        pandas.DataFrame: Cash flow data
+        pandas.DataFrame: Cash flow data, with items as rows and dates as columns
     """
     try:
         stock = yf.Ticker(ticker)
@@ -491,25 +494,27 @@ def get_cash_flow(ticker):
         
         # Choose the most complete data source
         if not cash_flow.empty and len(cash_flow.columns) > 0:
-            result = cash_flow.T
+            # Don't transpose - we want items as rows and dates as columns to match the screenshot
+            result = cash_flow
         else:
             # Try the quarterly cash flow
             quarterly_cf = stock.quarterly_cashflow
             if not quarterly_cf.empty and len(quarterly_cf.columns) > 0:
-                result = quarterly_cf.T
+                result = quarterly_cf
             else:
                 return pd.DataFrame()
         
-        # Format the index to match the screenshot format
-        if isinstance(result.index, pd.DatetimeIndex):
-            result.index = result.index.strftime('%m/%d/%Y')
+        # Format column names (dates) to be properly formatted
+        if isinstance(result.columns, pd.DatetimeIndex):
+            result.columns = result.columns.strftime('%m/%d/%Y')
         
-        # Add a TTM column for consistency with the other statements
-        if len(result) > 0:
+        # Sort columns to match the format (newest data on left)
+        result = result.sort_index(axis=1, ascending=False)
+        
+        # Add a TTM column for more complete display
+        if len(result.columns) > 0:
+            # Create a TTM column based on most recent data
             result['TTM'] = result.iloc[:, 0]
-        
-        # Sort to match screenshot format (newest data on left)
-        result = result.sort_index(ascending=False)
         
         return result
         
