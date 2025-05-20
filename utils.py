@@ -394,8 +394,8 @@ def get_income_statement(ticker):
         # Clean and format the data
         income_stmt = income_stmt.T
         
-        # Format the numbers to millions
-        income_stmt = income_stmt / 1_000_000
+        # Format the numbers to thousands
+        income_stmt = income_stmt / 1_000
         
         return income_stmt
     except Exception as e:
@@ -423,8 +423,8 @@ def get_balance_sheet(ticker):
         # Clean and format the data
         balance_sheet = balance_sheet.T
         
-        # Format the numbers to millions
-        balance_sheet = balance_sheet / 1_000_000
+        # Format the numbers to thousands
+        balance_sheet = balance_sheet / 1_000
         
         return balance_sheet
     except Exception as e:
@@ -452,8 +452,8 @@ def get_cash_flow(ticker):
         # Clean and format the data
         cash_flow = cash_flow.T
         
-        # Format the numbers to millions
-        cash_flow = cash_flow / 1_000_000
+        # Format the numbers to thousands
+        cash_flow = cash_flow / 1_000
         
         return cash_flow
     except Exception as e:
