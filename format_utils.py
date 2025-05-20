@@ -125,7 +125,8 @@ def format_indian_numbers(num, decimal_places=2, in_lakhs=False, in_crores=False
         num = num / 100000
         suffix = " L"
     else:
-        suffix = ""
+        # Keep as is for thousands (K) display
+        suffix = " K"
         
     # Format with the specified decimal places
     formatted_num = f"{num:.{decimal_places}f}"

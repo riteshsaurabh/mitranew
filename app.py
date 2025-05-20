@@ -492,13 +492,13 @@ with main_tabs[2]:
                 # Convert to INR if it's an Indian stock (approximate conversion)
                 balance_sheet = balance_sheet * 83.0  # Using fixed conversion rate
                 
-                # For Indian stocks, we'll display in Crores (not millions)
-                st.write("All figures in ₹ Crores")
+                # For Indian stocks, we'll display in thousands (K)
+                st.write("All figures in ₹ K (thousands)")
                 
-                # Format values to Indian system with commas, in Crores
+                # Format values to Indian system with commas, in thousands
                 for col in balance_sheet.columns:
                     balance_sheet[col] = balance_sheet[col].apply(
-                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_crores=True)
+                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_lakhs=False, in_crores=False)
                     )
             else:
                 st.write("All figures in millions $")
@@ -533,13 +533,13 @@ with main_tabs[2]:
                 # Convert to INR if it's an Indian stock (approximate conversion)
                 cash_flow = cash_flow * 83.0  # Using fixed conversion rate
                 
-                # For Indian stocks, we'll display in Crores (not millions)
-                st.write("All figures in ₹ Crores")
+                # For Indian stocks, we'll display in thousands (K)
+                st.write("All figures in ₹ K (thousands)")
                 
-                # Format values to Indian system with commas, in Crores
+                # Format values to Indian system with commas, in thousands
                 for col in cash_flow.columns:
                     cash_flow[col] = cash_flow[col].apply(
-                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_crores=True)
+                        lambda x: format_utils.format_indian_numbers(x, decimal_places=2, in_lakhs=False, in_crores=False)
                     )
             else:
                 st.write("All figures in millions $")
