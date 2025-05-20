@@ -376,7 +376,7 @@ def create_volume_chart(data):
 @st.cache_data(ttl=3600)
 def get_income_statement(ticker):
     """
-    Fetch income statement data from Yahoo Finance
+    Fetch income statement data from Yahoo Finance with proper formatting
     
     Args:
         ticker (str): Stock ticker symbol
@@ -386,37 +386,51 @@ def get_income_statement(ticker):
     """
     try:
         stock = yf.Ticker(ticker)
+        
+        # Get the complete financials information
+        # This provides more detailed financial data
+        financials = stock.financials
+        
+        # First try the income statement specific endpoint
         income_stmt = stock.income_stmt
         
-        if income_stmt.empty:
-            # Try using the financials endpoint as a fallback
-            financials = stock.financials
-            if not financials.empty:
-                return financials.T
-            return pd.DataFrame()
+        # Choose the most complete data source available
+        if not income_stmt.empty and len(income_stmt.columns) > 0:
+            # Use income_stmt if it's available and has data
+            result = income_stmt.T
+        elif not financials.empty and len(financials.columns) > 0:
+            # Fall back to financials if income_stmt is not available
+            result = financials.T
+        else:
+            # Last resort, try quarterly financials
+            quarterly = stock.quarterly_financials
+            if not quarterly.empty and len(quarterly.columns) > 0:
+                result = quarterly.T
+            else:
+                return pd.DataFrame()
         
-        # Clean and format the data
-        income_stmt = income_stmt.T
-                
-        # Keep original values without dividing by 1000
-        # Numbers will be properly formatted in the display function
+        # Make sure index is properly formatted
+        if isinstance(result.index, pd.DatetimeIndex):
+            result.index = result.index.strftime('%m/%d/%Y')
+            
+        # Add TTM (Trailing Twelve Months) column for more complete display
+        if len(result) > 0:
+            # Create a TTM column based on most recent data
+            result['TTM'] = result.iloc[:, 0]
         
-        return income_stmt
+        # Sort index to match the screenshot format (newest data on left)
+        result = result.sort_index(ascending=False)
+        
+        return result
+        
     except Exception as e:
         print(f"Error fetching income statement: {e}")
-        # Try alternative method
-        try:
-            financials = stock.financials
-            if not financials.empty:
-                return financials.T
-        except:
-            pass
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
 def get_balance_sheet(ticker):
     """
-    Fetch balance sheet data from Yahoo Finance
+    Fetch balance sheet data from Yahoo Finance with proper formatting
     
     Args:
         ticker (str): Stock ticker symbol
@@ -426,37 +440,42 @@ def get_balance_sheet(ticker):
     """
     try:
         stock = yf.Ticker(ticker)
+        
+        # Try main balance sheet endpoint first
         balance_sheet = stock.balance_sheet
         
-        if balance_sheet.empty:
-            # Try using the balance_sheet endpoint as a fallback
-            bs_annual = stock.quarterly_balance_sheet
-            if not bs_annual.empty:
-                return bs_annual.T
-            return pd.DataFrame()
+        # Choose the most complete data source
+        if not balance_sheet.empty and len(balance_sheet.columns) > 0:
+            result = balance_sheet.T
+        else:
+            # Try the quarterly balance sheet
+            quarterly_bs = stock.quarterly_balance_sheet
+            if not quarterly_bs.empty and len(quarterly_bs.columns) > 0:
+                result = quarterly_bs.T
+            else:
+                return pd.DataFrame()
         
-        # Clean and format the data
-        balance_sheet = balance_sheet.T
+        # Format the index to match the screenshot format
+        if isinstance(result.index, pd.DatetimeIndex):
+            result.index = result.index.strftime('%m/%d/%Y')
         
-        # Keep original values without dividing
-        # The formatting will be handled in the display function
+        # Add a TTM column for consistency with income statement
+        if len(result) > 0:
+            result['TTM'] = result.iloc[:, 0]
         
-        return balance_sheet
+        # Sort to match screenshot format (newest data on left)
+        result = result.sort_index(ascending=False)
+        
+        return result
+        
     except Exception as e:
         print(f"Error fetching balance sheet: {e}")
-        # Try alternative method
-        try:
-            bs_annual = stock.quarterly_balance_sheet
-            if not bs_annual.empty:
-                return bs_annual.T
-        except:
-            pass
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
 def get_cash_flow(ticker):
     """
-    Fetch cash flow data from Yahoo Finance
+    Fetch cash flow data from Yahoo Finance with proper formatting
     
     Args:
         ticker (str): Stock ticker symbol
@@ -466,31 +485,36 @@ def get_cash_flow(ticker):
     """
     try:
         stock = yf.Ticker(ticker)
+        
+        # Try main cash flow endpoint first
         cash_flow = stock.cashflow
         
-        if cash_flow.empty:
-            # Try using the quarterly cash flow as a fallback
+        # Choose the most complete data source
+        if not cash_flow.empty and len(cash_flow.columns) > 0:
+            result = cash_flow.T
+        else:
+            # Try the quarterly cash flow
             quarterly_cf = stock.quarterly_cashflow
-            if not quarterly_cf.empty:
-                return quarterly_cf.T
-            return pd.DataFrame()
+            if not quarterly_cf.empty and len(quarterly_cf.columns) > 0:
+                result = quarterly_cf.T
+            else:
+                return pd.DataFrame()
         
-        # Clean and format the data
-        cash_flow = cash_flow.T
+        # Format the index to match the screenshot format
+        if isinstance(result.index, pd.DatetimeIndex):
+            result.index = result.index.strftime('%m/%d/%Y')
         
-        # Keep original values without dividing
-        # The formatting will be handled in the display function
+        # Add a TTM column for consistency with the other statements
+        if len(result) > 0:
+            result['TTM'] = result.iloc[:, 0]
         
-        return cash_flow
+        # Sort to match screenshot format (newest data on left)
+        result = result.sort_index(ascending=False)
+        
+        return result
+        
     except Exception as e:
-        print(f"Error fetching cash flow: {e}")
-        # Try alternative method
-        try:
-            quarterly_cf = stock.quarterly_cashflow
-            if not quarterly_cf.empty:
-                return quarterly_cf.T
-        except:
-            pass
+        print(f"Error fetching cash flow statement: {e}")
         return pd.DataFrame()
 
 def display_metrics_cards(metrics_data, section_title="", is_indian=False):

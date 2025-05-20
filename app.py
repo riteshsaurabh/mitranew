@@ -445,20 +445,36 @@ with main_tabs[2]:
                 # If we can't format the dates, we'll keep the original index
                 pass
             
-            # Display currency and formatting
+            # Format similar to screenshot - detailed income statement
             if is_indian:
                 st.write("All figures in ₹")
             else:
                 st.write("All figures in $")
                 
-            # Format values with proper commas for number display
-            for col in income_statement.columns:
-                income_statement[col] = income_statement[col].apply(
+            # Format values to match the screenshot style
+            # Numbers should be formatted with commas but no decimal places for large numbers
+            formatted_statement = income_statement.copy()
+            
+            for col in formatted_statement.columns:
+                formatted_statement[col] = formatted_statement[col].apply(
                     lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
                               (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
                 )
             
-            st.dataframe(income_statement)
+            # Add a "Breakdown" column to identify the rows
+            if not formatted_statement.empty:
+                # Create a new DataFrame with the column name as first column
+                breakdown_df = pd.DataFrame({'Breakdown': formatted_statement.index})
+                
+                # Concatenate with the formatted data
+                display_df = pd.concat([breakdown_df, formatted_statement], axis=1)
+                
+                # Display using Streamlit's dataframe
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
         else:
             st.write("Income statement data not available for this stock.")
     
@@ -476,20 +492,36 @@ with main_tabs[2]:
                 # If we can't format the dates, we'll keep the original index
                 pass
             
-            # Display currency and formatting
+            # Format similar to screenshot - detailed balance sheet
             if is_indian:
                 st.write("All figures in ₹")
             else:
                 st.write("All figures in $")
                 
-            # Format values with proper commas for number display
-            for col in balance_sheet.columns:
-                balance_sheet[col] = balance_sheet[col].apply(
+            # Format values to match the screenshot style
+            # Numbers should be formatted with commas but no decimal places for large numbers
+            formatted_statement = balance_sheet.copy()
+            
+            for col in formatted_statement.columns:
+                formatted_statement[col] = formatted_statement[col].apply(
                     lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
                               (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
                 )
             
-            st.dataframe(balance_sheet)
+            # Add a "Breakdown" column to identify the rows
+            if not formatted_statement.empty:
+                # Create a new DataFrame with the column name as first column
+                breakdown_df = pd.DataFrame({'Breakdown': formatted_statement.index})
+                
+                # Concatenate with the formatted data
+                display_df = pd.concat([breakdown_df, formatted_statement], axis=1)
+                
+                # Display using Streamlit's dataframe
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
         else:
             st.write("Balance sheet data not available for this stock.")
     
@@ -507,20 +539,36 @@ with main_tabs[2]:
                 # If we can't format the dates, we'll keep the original index
                 pass
                 
-            # Display currency and formatting
+            # Format similar to screenshot - detailed cash flow statement
             if is_indian:
                 st.write("All figures in ₹")
             else:
                 st.write("All figures in $")
                 
-            # Format values with proper commas for number display
-            for col in cash_flow.columns:
-                cash_flow[col] = cash_flow[col].apply(
+            # Format values to match the screenshot style
+            # Numbers should be formatted with commas but no decimal places for large numbers
+            formatted_statement = cash_flow.copy()
+            
+            for col in formatted_statement.columns:
+                formatted_statement[col] = formatted_statement[col].apply(
                     lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and abs(x) >= 1 else 
                               (f"{x:,.2f}" if isinstance(x, (int, float)) else x)
                 )
             
-            st.dataframe(cash_flow)
+            # Add a "Breakdown" column to identify the rows
+            if not formatted_statement.empty:
+                # Create a new DataFrame with the column name as first column
+                breakdown_df = pd.DataFrame({'Breakdown': formatted_statement.index})
+                
+                # Concatenate with the formatted data
+                display_df = pd.concat([breakdown_df, formatted_statement], axis=1)
+                
+                # Display using Streamlit's dataframe
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
         else:
             st.write("Cash flow data not available for this stock.")
 
