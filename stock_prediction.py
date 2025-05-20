@@ -32,6 +32,9 @@ def generate_price_prediction(hist_data, forecast_days=30, model_type="linear"):
         # Extract the closing prices
         close_prices = hist_data['Close'].values
         
+        # Ensure forecast_days is an integer
+        forecast_days = int(forecast_days)
+        
         # Convert dates to numbers for prediction calculations to avoid timestamp arithmetic errors
         date_indices = np.arange(len(hist_data))
         forecast_indices = np.arange(len(hist_data), len(hist_data) + forecast_days)
@@ -216,9 +219,21 @@ def create_prediction_chart(prediction_data, company_name, currency="$"):
     )
     
     # Add confidence interval as a shaded area
-    # Create x and y values for confidence interval - ensure all are lists
-    ci_x = list(forecast_dates_str) + list(forecast_dates_str)[::-1]
-    ci_y = list(upper_ci.tolist()) + list(lower_ci.tolist())[::-1]
+    # Create x and y values for confidence interval - ensure all are properly converted
+    ci_x = list(forecast_dates_str) + list(reversed(forecast_dates_str))
+    
+    # Make sure to convert numpy arrays to regular Python lists if needed
+    if isinstance(upper_ci, np.ndarray):
+        upper_ci_list = upper_ci.tolist()
+    else:
+        upper_ci_list = list(upper_ci)
+        
+    if isinstance(lower_ci, np.ndarray):
+        lower_ci_list = lower_ci.tolist()
+    else:
+        lower_ci_list = list(lower_ci)
+    
+    ci_y = upper_ci_list + list(reversed(lower_ci_list))
     
     fig.add_trace(
         go.Scatter(
