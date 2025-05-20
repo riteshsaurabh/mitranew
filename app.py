@@ -248,7 +248,7 @@ with main_tabs[0]:
                 else:
                     st.metric("Market Cap", "N/A")
             else:
-                st.metric("Market Cap", utils.format_large_number(company_info.get('marketCap', 'N/A')))
+                st.metric("Market Cap", utils.format_large_number(company_info.get('marketCap', 'N/A'), is_indian=is_indian))
         with metrics_row[2]:
             pe_ratio = company_info.get('trailingPE')
             st.metric("P/E Ratio", f"{pe_ratio:.2f}" if isinstance(pe_ratio, (int, float)) else "N/A")

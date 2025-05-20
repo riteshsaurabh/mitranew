@@ -41,19 +41,25 @@ def get_company_info(ticker):
     info = stock.info
     return info
 
-def format_large_number(num):
+def format_large_number(num, is_indian=False):
     """
-    Format large numbers to K, M, B, T
+    Format large numbers to K, M, B, T or Indian format (Lakhs, Crores)
     
     Args:
         num: Number to format
+        is_indian: Whether to use Indian currency format
     
     Returns:
-        str: Formatted number
+        str: Formatted number with exactly 2 decimal places
     """
     if not isinstance(num, (int, float)):
         return "N/A"
     
+    # Use Indian format if requested
+    if is_indian:
+        return format_inr_number(num)
+    
+    # Otherwise use western format
     abs_num = abs(num)
     if abs_num >= 1_000_000_000_000:
         return f"${abs_num / 1_000_000_000_000:.2f}T"
@@ -65,6 +71,29 @@ def format_large_number(num):
         return f"${abs_num / 1_000:.2f}K"
     else:
         return f"${abs_num:.2f}"
+        
+def format_inr_number(num):
+    """
+    Format number in Indian Rupees notation (lakhs, crores)
+    
+    Args:
+        num: Number to format
+    
+    Returns:
+        str: Formatted amount in INR notation with exactly 2 decimal places
+    """
+    if not isinstance(num, (int, float)):
+        return "N/A"
+    
+    abs_num = abs(num)
+    if abs_num >= 10000000:  # Crore (10 million)
+        return f"₹{abs_num / 10000000:.2f} Cr"
+    elif abs_num >= 100000:  # Lakh (100 thousand)
+        return f"₹{abs_num / 100000:.2f} L"
+    elif abs_num >= 1000:    # Thousand
+        return f"₹{abs_num / 1000:.2f} K"
+    else:
+        return f"₹{abs_num:.2f}"
         
 def create_price_chart(data, title, is_indian=False):
     """
