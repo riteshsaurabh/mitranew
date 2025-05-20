@@ -353,17 +353,16 @@ def display_prediction_section(stock_symbol, hist_data, company_name, is_indian=
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        # Limit max forecast days based on data size
-        max_days = min(90, len(hist_data))
-        default_days = min(30, max_days // 2)
-        step = max(1, max_days // 10)
+        # Allow forecast from 7 to 180 days
+        max_days = 180
+        default_days = 30
         
         forecast_days = st.slider(
             "Forecast Days", 
             min_value=7, 
             max_value=max_days, 
             value=default_days, 
-            step=step,
+            step=1,
             help="Number of days to forecast into the future"
         )
     
@@ -411,6 +410,39 @@ def display_prediction_section(stock_symbol, hist_data, company_name, is_indian=
                 with col3:
                     confidence_range = f"{currency} {prediction['lower_ci'][-1]:.2f} - {currency} {prediction['upper_ci'][-1]:.2f}"
                     st.metric("95% Confidence Range", confidence_range)
+                
+                # Add prediction model explanations
+                with st.expander("Understanding Prediction Models"):
+                    st.markdown("""
+                    ### Stock Price Prediction Models Explained
+                    
+                    Our dashboard offers three different forecasting models to predict future stock prices, each with unique strengths:
+                    
+                    **Linear Regression**
+                    - Uses a straight-line trend to project future prices
+                    - Works best when stock prices show a consistent upward or downward trend
+                    - Simple but effective for short to medium-term forecasts
+                    - Less accurate during highly volatile market conditions
+                    
+                    **ARIMA (AutoRegressive Integrated Moving Average)**
+                    - Advanced time series model that considers past price patterns and cycles
+                    - Captures seasonal patterns and trends in the data
+                    - Generally performs better than linear regression for stocks with cyclical behavior
+                    - More computationally intensive but can provide more nuanced predictions
+                    
+                    **Exponential Smoothing**
+                    - Gives more weight to recent data points and less to older observations
+                    - Adapts quickly to recent price changes and market shifts
+                    - Good for stocks that are influenced by recent market sentiment
+                    - Especially useful during periods of changing market conditions
+                    
+                    **Confidence Intervals**
+                    - The shaded area shows the range where prices are likely to fall with 95% confidence
+                    - Wider intervals indicate greater uncertainty in the prediction
+                    - Narrower intervals suggest more reliable forecasts
+                    
+                    Choose the model that best matches the stock's historical behavior pattern for more accurate predictions.
+                    """)
                 
                 # Add prediction disclaimer
                 st.info("""
