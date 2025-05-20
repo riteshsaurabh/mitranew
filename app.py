@@ -500,9 +500,9 @@ with main_tabs[2]:
             "Total Assets"
         ]
         
-        # Create column headers for 4 years (Mar 2017, Mar 2016, etc.)
+        # Create column headers for 10 years (from current year back)
         current_year = pd.Timestamp.now().year
-        year_labels = [f'Mar {y}' for y in range(current_year, current_year-4, -1)]
+        year_labels = [f'Mar {y}' for y in range(current_year, current_year-10, -1)]
         
         # Create a demonstration balance sheet with real assets data
         # We'll extract real data when available and use sensible defaults/calculations when not
