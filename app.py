@@ -18,6 +18,7 @@ import financial_metrics
 import simple_watchlist
 import indian_markets
 import stock_news
+import format_utils
 import stock_prediction
 import sentiment_tracker
 
@@ -248,16 +249,16 @@ with main_tabs[0]:
                 else:
                     st.metric("Market Cap", "N/A")
             else:
-                st.metric("Market Cap", utils.format_large_number(company_info.get('marketCap', 'N/A'), is_indian=is_indian))
+                st.metric("Market Cap", format_utils.format_large_number(company_info.get('marketCap', 'N/A'), is_indian=is_indian))
         with metrics_row[2]:
             pe_ratio = company_info.get('trailingPE')
-            st.metric("P/E Ratio", f"{pe_ratio:.2f}" if isinstance(pe_ratio, (int, float)) else "N/A")
+            st.metric("P/E Ratio", format_utils.format_number(pe_ratio))
         with metrics_row[3]:
             if is_indian:
                 low = company_info.get('fiftyTwoWeekLow')
                 high = company_info.get('fiftyTwoWeekHigh')
                 if all(isinstance(val, (int, float)) for val in [low, high] if val is not None):
-                    st.metric("52W Range", f"₹{low:.2f} - ₹{high:.2f}")
+                    st.metric("52W Range", f"₹{format_utils.format_number(low)} - ₹{format_utils.format_number(high)}")
                 else:
                     st.metric("52W Range", "N/A")
             else:
