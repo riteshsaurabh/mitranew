@@ -1044,9 +1044,9 @@ with main_tabs[2]:
         
         # Display subtitle for P&L Statement
         if is_indian:
-            st.write("Consolidated Figures in Rs. Crores / View Standalone")
+            st.write("Consolidated Figures in Rs. Crores")
         else:
-            st.write("Consolidated Figures in $ Millions / View Standalone")
+            st.write("Consolidated Figures in $ Millions")
         
         # Get raw income statement data from Yahoo Finance (we'll use this as the basis for P&L)
         raw_income_data = utils.get_income_statement(stock_symbol)
@@ -1273,19 +1273,7 @@ with main_tabs[2]:
             # Create DataFrame from the data
             df = pd.DataFrame(pl_data, index=row_labels)
             
-            # Add action buttons similar to the screenshot
-            cols = st.columns([0.7, 0.3])
-            with cols[1]:
-                st.markdown("""
-                <div style="text-align: right; margin-bottom: 10px;">
-                    <button style="background-color: #f0f2f6; border: none; padding: 5px 10px; margin-right: 5px; border-radius: 5px;">
-                        <span style="color: #6c63ff;">⚙ RELATED PARTY</span>
-                    </button>
-                    <button style="background-color: #f0f2f6; border: none; padding: 5px 10px; border-radius: 5px;">
-                        <span style="color: #6c63ff;">⚙ PRODUCT SEGMENTS</span>
-                    </button>
-                </div>
-                """, unsafe_allow_html=True)
+            # No action buttons as requested
             
             # Create HTML for the P&L table with styling to match the screenshot
             st.markdown("""
