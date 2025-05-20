@@ -772,19 +772,19 @@ def get_peer_comparison_data(main_symbol, peer_symbols, is_indian=False):
     for col in ['Profit Margin', 'ROE', 'Dividend Yield']:
         if col in comparison_data.columns:
             comparison_data[col] = comparison_data[col].apply(
-                lambda x: f"{x:.2f}%" if pd.notnull(x) else None
+                lambda x: format_utils.format_percent(x) if pd.notnull(x) else None
             )
     
     # Format other numeric columns
     for col in ['P/E Ratio', 'P/B Ratio', 'Beta']:
         if col in comparison_data.columns:
             comparison_data[col] = comparison_data[col].apply(
-                lambda x: f"{x:.2f}" if pd.notnull(x) else None
+                lambda x: format_utils.format_number(x) if pd.notnull(x) else None
             )
     
     # Format price with currency symbol
     comparison_data['Price'] = comparison_data['Price'].apply(
-        lambda x: f"₹{x:.2f}" if pd.notnull(x) and is_indian else f"${x:.2f}" if pd.notnull(x) else None
+        lambda x: format_utils.format_currency(x, is_indian=is_indian) if pd.notnull(x) else None
     )
     
     return comparison_data
