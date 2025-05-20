@@ -265,7 +265,7 @@ with main_tabs[0]:
                 low = company_info.get('fiftyTwoWeekLow')
                 high = company_info.get('fiftyTwoWeekHigh')
                 if all(isinstance(val, (int, float)) for val in [low, high] if val is not None):
-                    st.metric("52W Range", f"${low:.2f} - ${high:.2f}")
+                    st.metric("52W Range", f"${format_utils.format_number(low)} - ${format_utils.format_number(high)}")
                 else:
                     st.metric("52W Range", "N/A")
     
@@ -403,11 +403,11 @@ with main_tabs[1]:
         
         st.write("**Basic Statistics**")
         metrics_data = {
-            "Mean": f"{currency}{stats['mean']:.2f}",
-            "Median": f"{currency}{stock_data['Close'].median():.2f}",
-            "Std Dev": f"{currency}{stats['std']:.2f}",
-            "Min": f"{currency}{stats['min']:.2f}",
-            "Max": f"{currency}{stats['max']:.2f}"
+            "Mean": format_utils.format_currency(stats['mean'], is_indian=is_indian),
+            "Median": format_utils.format_currency(stock_data['Close'].median(), is_indian=is_indian),
+            "Std Dev": format_utils.format_currency(stats['std'], is_indian=is_indian),
+            "Min": format_utils.format_currency(stats['min'], is_indian=is_indian),
+            "Max": format_utils.format_currency(stats['max'], is_indian=is_indian)
         }
         utils.display_metrics_cards(metrics_data, "")
     
@@ -417,11 +417,11 @@ with main_tabs[1]:
         
         st.write("**Returns Analysis**")
         metrics_data = {
-            "Daily Avg Return": f"{daily_returns.mean()*100:.2f}%",
-            "Daily Volatility": f"{daily_returns.std()*100:.2f}%",
-            "Max Daily Gain": f"{daily_returns.max()*100:.2f}%",
-            "Max Daily Loss": f"{daily_returns.min()*100:.2f}%",
-            "Positive Days": f"{(daily_returns > 0).sum()} ({(daily_returns > 0).mean()*100:.1f}%)"
+            "Daily Avg Return": format_utils.format_percent(daily_returns.mean()),
+            "Daily Volatility": format_utils.format_percent(daily_returns.std()),
+            "Max Daily Gain": format_utils.format_percent(daily_returns.max()),
+            "Max Daily Loss": format_utils.format_percent(daily_returns.min()),
+            "Positive Days": f"{(daily_returns > 0).sum()} ({format_utils.format_percent((daily_returns > 0).mean())})"
         }
         utils.display_metrics_cards(metrics_data, "")
 
@@ -749,10 +749,10 @@ def get_peer_comparison_data(main_symbol, peer_symbols, is_indian=False):
             
             # Market cap (with Indian notation if needed)
             market_cap = info.get('marketCap', None)
-            if is_indian and market_cap:
-                data['Market Cap'] = indian_markets.format_inr(market_cap)
+            if market_cap:
+                data['Market Cap'] = format_utils.format_large_number(market_cap, is_indian=is_indian)
             else:
-                data['Market Cap'] = utils.format_large_number(market_cap) if market_cap else None
+                data['Market Cap'] = None
             
             # Other metrics
             data['P/E Ratio'] = info.get('trailingPE', None)
