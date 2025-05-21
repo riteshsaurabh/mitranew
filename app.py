@@ -3,7 +3,7 @@ import streamlit as st
 st.set_page_config(
     page_title="MoneyMitra - Your Financial Mitra",
     page_icon="💰",
-    layout="centered",  # Using centered layout for medium mode
+    layout="wide",  # Using wide layout for full screen
     initial_sidebar_state="expanded",
 )
 
@@ -218,15 +218,154 @@ main_tabs = st.tabs([
 
 # Dashboard Overview Tab
 with main_tabs[0]:
-    # Overview section
-    st.header("Company Overview")
+    # Overview section with more modern and spacious layout
+    st.markdown("<div class='dashboard-title'>{}</div>".format(company_info.get('longName', stock_symbol)), unsafe_allow_html=True)
     
-    overview_col1, overview_col2 = st.columns([2, 1])
+    # Create a more balanced 3-column layout for key metrics
+    metrics_row = st.columns(3)
     
-    with overview_col1:
-        if 'longName' in company_info:
-            st.subheader(company_info.get('longName', stock_symbol))
+    # Current Price in first column with large font and color
+    with metrics_row[0]:
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        current_price = stock_data['Close'].iloc[-1]
+        price_change = stock_data['Close'].iloc[-1] - stock_data['Close'].iloc[-2]
+        price_change_pct = (price_change / stock_data['Close'].iloc[-2]) * 100
+        
+        price_color = "positive-value" if price_change >= 0 else "negative-value"
+        price_symbol = "▲" if price_change >= 0 else "▼"
+        
+        formatted_price = format_utils.format_currency(current_price, is_indian)
+        formatted_change = format_utils.format_currency(abs(price_change), is_indian)
+        
+        st.markdown(f"<p class='metric-label'>Current Price</p>", unsafe_allow_html=True)
+        st.markdown(f"<p class='metric-value {price_color}'>{formatted_price}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p class='{price_color}'>{price_symbol} {formatted_change} ({price_change_pct:.2f}%)</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Market Cap in second column
+    with metrics_row[1]:
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        market_cap = company_info.get('marketCap', 0)
+        if is_indian:
+            # Convert to crores for Indian stocks
+            market_cap_str = format_utils.format_large_number(market_cap, is_indian=True)
+        else:
+            market_cap_str = format_utils.format_large_number(market_cap)
             
+        st.markdown(f"<p class='metric-label'>Market Cap</p>", unsafe_allow_html=True)
+        st.markdown(f"<p class='metric-value'>{market_cap_str}</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # P/E Ratio in third column
+    with metrics_row[2]:
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        pe_ratio = company_info.get('trailingPE', company_info.get('forwardPE', 0))
+        
+        # Add a visual indicator of P/E ratio compared to industry average
+        industry_pe = company_info.get('industryPE', 20)  # default industry PE if not available
+        pe_status = ""
+        if pe_ratio > 0:
+            if pe_ratio < industry_pe * 0.8:
+                pe_status = "👍 Below industry average"
+            elif pe_ratio > industry_pe * 1.2:
+                pe_status = "⚠️ Above industry average"
+            else:
+                pe_status = "Near industry average"
+                
+        st.markdown(f"<p class='metric-label'>P/E Ratio</p>", unsafe_allow_html=True)
+        st.markdown(f"<p class='metric-value'>{pe_ratio:.2f}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p>{pe_status}</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Create second row of metrics for additional key data
+    metrics_row2 = st.columns(3)
+    
+    # 52-Week Range
+    with metrics_row2[0]:
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        
+        try:
+            yearly_data = stock_data.loc[stock_data.index >= (datetime.now() - timedelta(days=365))]
+            if not yearly_data.empty:
+                low_52_week = yearly_data['Low'].min()
+                high_52_week = yearly_data['High'].max()
+                current = stock_data['Close'].iloc[-1]
+                
+                # Calculate where current price falls in the 52-week range (0-100%)
+                range_percent = ((current - low_52_week) / (high_52_week - low_52_week)) * 100
+                
+                # Format values
+                low_str = format_utils.format_currency(low_52_week, is_indian)
+                high_str = format_utils.format_currency(high_52_week, is_indian)
+                
+                st.markdown(f"<p class='metric-label'>52-Week Range</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='metric-value'>{low_str} - {high_str}</p>", unsafe_allow_html=True)
+                
+                # Add a simple visual indicator showing where current price is in the range
+                st.progress(min(max(range_percent, 0), 100)/100)
+        except:
+            st.markdown(f"<p class='metric-label'>52-Week Range</p>", unsafe_allow_html=True)
+            st.markdown("<p class='metric-value'>Data unavailable</p>", unsafe_allow_html=True)
+            
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Volume
+    with metrics_row2[1]:
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        
+        try:
+            avg_volume = company_info.get('averageVolume', 0)
+            recent_volume = stock_data['Volume'].iloc[-1]
+            
+            volume_str = format_utils.format_large_number(recent_volume)
+            avg_volume_str = format_utils.format_large_number(avg_volume)
+            
+            # Calculate volume comparison to average
+            volume_ratio = (recent_volume / avg_volume) if avg_volume > 0 else 0
+            volume_status = ""
+            
+            if volume_ratio > 1.5:
+                volume_status = "📈 High volume"
+            elif volume_ratio < 0.5:
+                volume_status = "📉 Low volume"
+            else:
+                volume_status = "Average volume"
+                
+            st.markdown(f"<p class='metric-label'>Recent Volume</p>", unsafe_allow_html=True)
+            st.markdown(f"<p class='metric-value'>{volume_str}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p>{volume_status} ({volume_ratio:.1f}x avg)</p>", unsafe_allow_html=True)
+        except:
+            st.markdown(f"<p class='metric-label'>Volume</p>", unsafe_allow_html=True)
+            st.markdown("<p class='metric-value'>Data unavailable</p>", unsafe_allow_html=True)
+            
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Dividend Yield
+    with metrics_row2[2]:
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        
+        dividend_yield = company_info.get('dividendYield', 0)
+        if dividend_yield:
+            dividend_yield = dividend_yield * 100  # Convert to percentage
+            st.markdown(f"<p class='metric-label'>Dividend Yield</p>", unsafe_allow_html=True)
+            st.markdown(f"<p class='metric-value'>{dividend_yield:.2f}%</p>", unsafe_allow_html=True)
+            
+            # Add dividend comparison to industry
+            industry_yield = company_info.get('industry_dividend_yield', 2.0)  # default value
+            if dividend_yield > industry_yield * 1.5:
+                st.markdown("<p>💰 High yield stock</p>", unsafe_allow_html=True)
+            elif dividend_yield > 0:
+                st.markdown("<p>Pays dividends</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p>No dividend</p>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<p class='metric-label'>Dividend Yield</p>", unsafe_allow_html=True)
+            st.markdown("<p class='metric-value'>No dividend</p>", unsafe_allow_html=True)
+            
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Company description in expandable section
+    with st.expander("📝 Company Description", expanded=False):
         st.write(company_info.get('longBusinessSummary', 'No company description available.'))
         
         # Metrics row

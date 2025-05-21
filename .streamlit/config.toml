@@ -2,39 +2,13 @@
 headless = true
 address = "0.0.0.0"
 port = 5000
-maxUploadSize = 10
-maxMessageSize = 200
 
-[browser]
-gatherUsageStats = false
-
-[client]
-toolbarMode = "minimal"
-
-# Theme Option 3: Royal Blue, Teal Blue, and Orange (Currently Active)
 [theme]
-primaryColor = "#FF6B1A"  # Vibrant Orange
-backgroundColor = "#FFFFFF"  # White
-secondaryBackgroundColor = "#E6F3F5"  # Light Teal Blue
-textColor = "#19398A"  # Royal Blue
+primaryColor = "#0066CC"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
 font = "sans-serif"
 
-[runner]
-# Enable magic commands
-magicEnabled = true
-
-# Theme Option 4: Dark Mode Finance
-# [theme]
-# primaryColor = "#00CF91"  # Bright Teal
-# backgroundColor = "#121212"  # Near Black
-# secondaryBackgroundColor = "#1E1E1E"  # Dark Gray
-# textColor = "#E0E0E0"  # Light Gray
-# font = "sans-serif"
-
-# Theme Option 5: Premium Gold
-# [theme]
-# primaryColor = "#D4AF37"  # Gold
-# backgroundColor = "#FFFFFF"  # White
-# secondaryBackgroundColor = "#F5F5F5"  # Light Gray
-# textColor = "#2C3E50"  # Dark Blue-Gray
-# font = "sans-serif"
+[deprecation]
+showPyplotGlobalUse = false

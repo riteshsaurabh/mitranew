@@ -1,326 +1,176 @@
-/* Futuristic Gen-Z Style for MoneyMitra with Royal Blue, Teal Blue, and Orange theme */
+/* MoneyMitra - Modern Finance Dashboard Styling */
 
-/* Main title styling */
-.main-title {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 800;
-    text-transform: uppercase;
-    background: linear-gradient(90deg, #FF6B1A, #19398A);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.5rem;
-    font-size: 3rem;
-    letter-spacing: -0.05em;
-    text-shadow: 0 2px 10px rgba(25, 57, 138, 0.2);
+/* Main container styling */
+.main-container {
+    padding: 0rem 1rem;
 }
 
-/* Subtitle styling */
-.subtitle {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 400;
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
-    color: #19398A;
-    letter-spacing: 0.02em;
-}
-
-/* Card styling for dashboard elements */
-.card {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    border-radius: 15px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    border-left: 4px solid #FF6B1A;
-    margin-bottom: 1.5rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(25, 57, 138, 0.1);
-    border-left: 4px solid #19398A;
-}
-
-/* Metric styling */
-.metric-container {
-    background: linear-gradient(135deg, rgba(25, 57, 138, 0.05), rgba(78, 205, 196, 0.1));
-    padding: 1rem;
-    border-radius: 12px;
+/* Dashboard title styling */
+.dashboard-title {
+    color: #0066CC;
     text-align: center;
-    border-bottom: 3px solid #4ECDC4;
+    padding-bottom: 1rem;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.dashboard-subtitle {
+    color: #555;
+    text-align: center;
+    margin-top: -1rem;
+    padding-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+/* Card styling */
+.metric-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    text-align: center;
 }
 
 .metric-value {
     font-size: 1.8rem;
-    font-weight: 700;
-    color: #19398A;
+    font-weight: bold;
+    margin: 0.5rem 0;
 }
 
 .metric-label {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #4ECDC4;
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
 }
 
-/* Navigation and tabs styling */
-div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-    background-color: transparent;
-    border: none;
-    border-radius: 8px;
-    color: #19398A;
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    transition: all 0.2s ease;
-}
-
-div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-    background-color: rgba(78, 205, 196, 0.1);
-    transform: translateY(-2px);
-}
-
-div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] button[kind="secondary"][data-baseweb="tab"][aria-selected="true"] {
-    background-color: #FF6B1A;
-    color: white;
-    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
-}
-
-/* Chart enhancements */
-div[data-testid="stChart"] {
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(78, 205, 196, 0.2);
-}
-
-/* Modern inputs */
-div[data-testid="stTextInput"] input {
-    border-radius: 8px;
-    border: 1px solid rgba(25, 57, 138, 0.2);
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-div[data-testid="stTextInput"] input:focus {
-    border-color: #4ECDC4;
-    box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
-    transform: translateY(-2px);
-}
-
-/* Sidebar styling */
-section[data-testid="stSidebar"] {
-    background-color: #E6F3F5;
-    border-right: none;
-}
-
-/* Footer */
-.footer {
-    text-align: center;
-    padding: 2rem 0;
-    color: #19398A;
-    font-size: 0.8rem;
-}
-
-/* Background gradient */
-.stApp {
-    background: linear-gradient(135deg, #ffffff, #E6F3F5);
-}
-
-/* Custom badges */
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 30px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-right: 0.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-.badge-green {
-    background-color: rgba(78, 205, 196, 0.15);
-    color: #4ECDC4;
-}
-
-.badge-red {
-    background-color: rgba(229, 57, 53, 0.15);
-    color: #E53935;
-}
-
-.badge-blue {
-    background-color: rgba(25, 57, 138, 0.15);
-    color: #19398A;
-}
-
-.badge-orange {
-    background-color: rgba(255, 107, 26, 0.15);
-    color: #FF6B1A;
-}
-
-/* News card */
-.news-card {
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    border-left: 4px solid #FF6B1A;
-    margin-bottom: 1rem;
+/* Chart styling */
+.chart-container {
+    background-color: white;
+    border-radius: 10px;
     padding: 1rem;
-    background: white;
-    box-shadow: 0 4px 6px rgba(25, 57, 138, 0.05);
-}
-
-.news-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 15px rgba(25, 57, 138, 0.1);
-    border-left: 4px solid #4ECDC4;
-}
-
-/* News source badge */
-.news-source {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #19398A;
-    background-color: rgba(78, 205, 196, 0.1);
-    padding: 0.15rem 0.5rem;
-    border-radius: 30px;
-    margin-right: 0.5rem;
-}
-
-/* Stock price prediction */
-.prediction-container {
-    border-radius: 15px;
-    overflow: hidden;
-    background: linear-gradient(135deg, rgba(255, 107, 26, 0.05), rgba(25, 57, 138, 0.05));
-    padding: 1.5rem;
-    margin-top: 1rem;
-    border: 1px solid rgba(78, 205, 196, 0.2);
-    box-shadow: 0 10px 25px rgba(25, 57, 138, 0.05);
-}
-
-/* Prediction confidence band styling */
-.prediction-band-high {
-    fill: rgba(78, 205, 196, 0.1);
-    stroke: rgba(78, 205, 196, 0.5);
-    stroke-width: 1;
-}
-
-.prediction-band-low {
-    fill: rgba(255, 107, 26, 0.1);
-    stroke: rgba(255, 107, 26, 0.5);
-    stroke-width: 1;
-}
-
-/* Tooltip styling */
-.tooltip {
-    position: relative;
-    display: inline-block;
-    cursor: pointer;
-}
-
-.tooltip .tooltiptext {
-    visibility: hidden;
-    background-color: #19398A;
-    color: white;
-    text-align: center;
-    border-radius: 8px;
-    padding: 8px 12px;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    transition: all 0.3s;
-    font-size: 0.75rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    border-left: 3px solid #FF6B1A;
-}
-
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-    opacity: 1;
-    transform: translateX(-50%) translateY(-5px);
-}
-
-/* Animate stock sparklines */
-@keyframes drawLine {
-    from {
-        stroke-dashoffset: 1000;
-    }
-    to {
-        stroke-dashoffset: 0;
-    }
-}
-
-.sparkline path {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-    animation: drawLine 1.5s ease-in-out forwards;
-}
-
-/* Custom tabs styling */
-.custom-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     margin-bottom: 1.5rem;
 }
 
-.custom-tab {
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    background-color: rgba(230, 243, 245, 0.8);
-    color: #19398A;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: 1px solid transparent;
+/* Tab styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 10px;
 }
 
-.custom-tab:hover {
-    background-color: rgba(78, 205, 196, 0.1);
-    transform: translateY(-2px);
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: white;
+    border-radius: 4px 4px 0px 0px;
+    padding: 0px 16px;
+    font-weight: 400;
 }
 
-.custom-tab.active {
-    background-color: #FF6B1A;
+.stTabs [aria-selected="true"] {
+    background-color: #0066CC;
     color: white;
-    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
 }
 
-/* Modern table styling */
-div[data-testid="stTable"] table {
-    border-collapse: separate;
-    border-spacing: 0;
+/* Table styling */
+.dataframe {
     width: 100%;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
 }
 
-div[data-testid="stTable"] th {
-    background-color: rgba(25, 57, 138, 0.05);
-    color: #19398A;
+.dataframe th {
+    background-color: #f0f2f6;
+    text-align: center;
+    padding: 12px;
+    border: 1px solid #ddd;
     font-weight: 600;
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 2px solid rgba(78, 205, 196, 0.2);
 }
 
-div[data-testid="stTable"] td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(78, 205, 196, 0.1);
+.dataframe td {
+    text-align: right;
+    padding: 10px;
+    border: 1px solid #ddd;
 }
 
-div[data-testid="stTable"] tr:last-child td {
-    border-bottom: none;
+.dataframe tr:nth-child(even) {
+    background-color: #f9f9f9;
 }
 
-div[data-testid="stTable"] tr:hover td {
-    background-color: rgba(78, 205, 196, 0.05);
+/* Financial statement key rows highlighting */
+.dataframe tr:nth-child(3), 
+.dataframe tr:nth-child(8), 
+.dataframe tr:nth-child(10) {
+    font-weight: bold;
+    background-color: #f0f7ff;
+}
+
+/* News and articles styling */
+.news-container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.news-date {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.news-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0.3rem 0;
+}
+
+.news-summary {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Ticker input styling */
+.ticker-input {
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-right: 0.5rem;
+}
+
+/* Watchlist styling */
+.watchlist-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.watchlist-item:hover {
+    background-color: #f5f5f5;
+}
+
+/* Emoji styling for sentiment */
+.sentiment-emoji {
+    font-size: 2rem;
+    margin: 0.5rem 0;
+}
+
+/* Color indicators */
+.positive-value {
+    color: #118811;
+}
+
+.negative-value {
+    color: #cc0000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .metric-value {
+        font-size: 1.4rem;
+    }
+    
+    .chart-container {
+        padding: 0.5rem;
+    }
 }
