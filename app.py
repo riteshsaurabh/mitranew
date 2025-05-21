@@ -22,6 +22,8 @@ import random
 import format_utils
 import stock_prediction
 import sentiment_tracker
+import peer_comparison
+import screener_data  # New module for fetching data from Screener.in
 
 # Load custom CSS
 with open('style.css') as f:
@@ -1049,153 +1051,173 @@ with main_tabs[2]:
             st.write("Consolidated Figures in $ Millions")
             
         # Create a simple function to display P&L data
-        def display_pl_statement(stock_symbol):
+        def display_pl_statement(stock_symbol, is_indian=False):
             try:
-                # Get stock data
-                ticker = yf.Ticker(stock_symbol)
-                
-                # For proper P&L table, we need to gather info from different sources
-                income_data = ticker.income_stmt
-                info = ticker.info  # Company general info
-                
-                # If no income statement is available, fallback to financials
-                if income_data is None or income_data.empty:
-                    income_data = ticker.financials
-                
-                # If still no data, show a message and return
-                if income_data is None or income_data.empty:
-                    st.warning("No financial data available for this stock.")
-                    return
-                
-                # Units conversion factor - Millions for USD, Crores for INR
-                divisor = 10000000 if is_indian else 1000000
-                currency = "₹" if is_indian else "$"
-                
-                # Format column names to be more readable (e.g., Sep 2024 instead of 2024-09-30)
-                if isinstance(income_data.columns, pd.DatetimeIndex):
-                    income_data.columns = [col.strftime('%b %Y') for col in income_data.columns]
-                
-                # Sort columns to show most recent first
-                income_data = income_data.sort_index(axis=1, ascending=False)
-                
-                # Create our P&L structure with the rows we want to display
-                pl_rows = [
-                    "Sales",
-                    "Expenses",
-                    "Operating Profit",
-                    "OPM %",
-                    "Other Income",
-                    "Interest",
-                    "Depreciation",
-                    "Profit before tax",
-                    "Tax %",
-                    "Net Profit",
-                    "EPS in Rs",
-                    "Dividend Payout %"
-                ]
-                
-                # Build a mapping dictionary from Yahoo Finance keys to our P&L rows
-                key_mapping = {
-                    # Standard keys
-                    "Total Revenue": "Sales",
-                    "Operating Revenue": "Sales",
-                    "Cost Of Revenue": "Expenses",
-                    "Total Expenses": "Expenses",
-                    "Operating Income": "Operating Profit",
-                    "EBIT": "Operating Profit",
-                    "Gross Profit": "Operating Profit",
-                    "Other Income Expense": "Other Income",
-                    "Other Non Operating Income Expenses": "Other Income",
-                    "Interest Expense": "Interest",
-                    "Interest Expense Non Operating": "Interest",
-                    "Reconciled Depreciation": "Depreciation",
-                    "Depreciation And Amortization": "Depreciation",
-                    "Pretax Income": "Profit before tax",
-                    "Income Before Tax": "Profit before tax",
-                    "Tax Provision": "Tax %",
-                    "Income Tax Expense": "Tax %",
-                    "Net Income": "Net Profit",
-                    "Net Income Common Stockholders": "Net Profit",
-                    "Basic EPS": "EPS in Rs",
-                    "Diluted EPS": "EPS in Rs"
-                }
-                
-                # Create a DataFrame to display our formatted P&L statement
-                result_df = pd.DataFrame(index=pl_rows)
-                
-                # Process each year column
-                for col in income_data.columns:
-                    # Create an empty column 
-                    result_df[col] = None
-                    
-                    # Map values from income statement to our P&L rows
-                    for source_key, target_row in key_mapping.items():
-                        if source_key in income_data.index:
-                            # Get the value
-                            value = income_data.loc[source_key, col]
-                            
-                            # Skip if it's NaN
-                            if pd.isna(value):
-                                continue
-                                
-                            # Convert to millions/crores
-                            if target_row != "EPS in Rs" and target_row != "OPM %" and target_row != "Tax %" and target_row != "Dividend Payout %":
-                                value = value / divisor
-                            
-                            # Store in our result DataFrame
-                            result_df.loc[target_row, col] = value
-                    
-                    # Calculate any missing values
-                    
-                    # If we have Sales but no Operating Profit, calculate it
-                    if result_df.loc["Sales", col] is not None and result_df.loc["Operating Profit", col] is None:
-                        if result_df.loc["Expenses", col] is not None:
-                            result_df.loc["Operating Profit", col] = result_df.loc["Sales", col] - result_df.loc["Expenses", col]
-                    
-                    # If we have Sales and Operating Profit but no Expenses, calculate it
-                    if result_df.loc["Sales", col] is not None and result_df.loc["Operating Profit", col] is not None:
-                        if result_df.loc["Expenses", col] is None:
-                            result_df.loc["Expenses", col] = result_df.loc["Sales", col] - result_df.loc["Operating Profit", col]
-                    
-                    # Calculate OPM % if we have both Sales and Operating Profit
-                    if result_df.loc["Sales", col] is not None and result_df.loc["Operating Profit", col] is not None:
-                        if result_df.loc["Sales", col] != 0:
-                            result_df.loc["OPM %", col] = (result_df.loc["Operating Profit", col] / result_df.loc["Sales", col]) * 100
-                    
-                    # Calculate Tax % if we have both Tax and Profit before tax
-                    if result_df.loc["Tax %", col] is not None and result_df.loc["Profit before tax", col] is not None:
-                        if isinstance(result_df.loc["Tax %", col], (int, float)) and isinstance(result_df.loc["Profit before tax", col], (int, float)):
-                            if result_df.loc["Profit before tax", col] != 0:
-                                # Calculate actual tax percentage
-                                result_df.loc["Tax %", col] = abs(result_df.loc["Tax %", col] / result_df.loc["Profit before tax", col] * 100)
-                
-                # Format values for display
-                display_df = result_df.copy()
-                for col in display_df.columns:
-                    for idx in display_df.index:
-                        value = display_df.loc[idx, col]
+                # First try to get data from Screener.in for Indian stocks
+                screener_data_available = False
+                if is_indian:
+                    with st.spinner("Fetching financial data from Screener.in..."):
+                        # Get P&L data from Screener
+                        pl_df = screener_data.get_profit_and_loss(stock_symbol)
                         
-                        # Format based on what type of value it is
-                        if pd.isna(value) or value is None:
-                            display_df.loc[idx, col] = "N/A"
-                        elif idx in ["OPM %", "Tax %", "Dividend Payout %"]:
-                            # Format percentages
-                            try:
-                                display_df.loc[idx, col] = f"{int(round(value))}%"
-                            except:
+                        # Check if we got data
+                        if not pl_df.empty:
+                            # Format the data for display
+                            st.success("Using Screener.in financial data")
+                            formatted_df = screener_data.format_pl_statement(pl_df, is_indian=True)
+                            screener_data_available = True
+                
+                # If Screener data is not available or it's a non-Indian stock, use Yahoo Finance
+                if not is_indian or not screener_data_available:
+                    # Get stock data from Yahoo Finance
+                    ticker = yf.Ticker(stock_symbol)
+                    
+                    # For proper P&L table, we need to gather info from different sources
+                    income_data = ticker.income_stmt
+                    info = ticker.info  # Company general info
+                    
+                    # If no income statement is available, fallback to financials
+                    if income_data is None or income_data.empty:
+                        income_data = ticker.financials
+                    
+                    # If still no data, show a message and return
+                    if income_data is None or income_data.empty:
+                        st.warning("No financial data available from Yahoo Finance for this stock.")
+                        return
+                    
+                    # Units conversion factor - Millions for USD, Crores for INR
+                    divisor = 10000000 if is_indian else 1000000
+                    currency = "₹" if is_indian else "$"
+                    
+                    # Format column names to be more readable (e.g., Sep 2024 instead of 2024-09-30)
+                    if isinstance(income_data.columns, pd.DatetimeIndex):
+                        income_data.columns = [col.strftime('%b %Y') for col in income_data.columns]
+                    
+                    # Sort columns to show most recent first
+                    income_data = income_data.sort_index(axis=1, ascending=False)
+                    
+                    # Create our P&L structure with the rows we want to display
+                    pl_rows = [
+                        "Sales",
+                        "Expenses",
+                        "Operating Profit",
+                        "OPM %",
+                        "Other Income",
+                        "Interest",
+                        "Depreciation",
+                        "Profit before tax",
+                        "Tax %",
+                        "Net Profit",
+                        "EPS in Rs",
+                        "Dividend Payout %"
+                    ]
+                    
+                    # Map Yahoo Finance keys to our P&L rows
+                    key_mapping = {
+                        # Standard keys
+                        "Total Revenue": "Sales",
+                        "Operating Revenue": "Sales",
+                        "Cost Of Revenue": "Expenses",
+                        "Total Expenses": "Expenses",
+                        "Operating Income": "Operating Profit",
+                        "EBIT": "Operating Profit",
+                        "Gross Profit": "Operating Profit",
+                        "Other Income Expense": "Other Income",
+                        "Other Non Operating Income Expenses": "Other Income",
+                        "Interest Expense": "Interest",
+                        "Interest Expense Non Operating": "Interest",
+                        "Reconciled Depreciation": "Depreciation",
+                        "Depreciation And Amortization": "Depreciation",
+                        "Pretax Income": "Profit before tax",
+                        "Income Before Tax": "Profit before tax",
+                        "Tax Provision": "Tax %",
+                        "Income Tax Expense": "Tax %",
+                        "Net Income": "Net Profit",
+                        "Net Income Common Stockholders": "Net Profit",
+                        "Basic EPS": "EPS in Rs",
+                        "Diluted EPS": "EPS in Rs"
+                    }
+                    
+                    # Create a DataFrame to display our formatted P&L statement
+                    formatted_df = pd.DataFrame(index=pl_rows)
+                    
+                    # Process each year column
+                    for col in income_data.columns:
+                        # Create an empty column 
+                        formatted_df[col] = None
+                        
+                        # Map values from income statement to our P&L rows
+                        for source_key, target_row in key_mapping.items():
+                            if source_key in income_data.index:
+                                # Get the value
+                                value = income_data.loc[source_key, col]
+                                
+                                # Skip if it's NaN
+                                if pd.isna(value):
+                                    continue
+                                    
+                                # Convert to millions/crores
+                                if target_row != "EPS in Rs" and target_row != "OPM %" and target_row != "Tax %" and target_row != "Dividend Payout %":
+                                    value = value / divisor
+                                
+                                # Store in our result DataFrame
+                                formatted_df.loc[target_row, col] = value
+                        
+                        # Calculate any missing values
+                        
+                        # If we have Sales but no Operating Profit, calculate it
+                        if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is None:
+                            if formatted_df.loc["Expenses", col] is not None:
+                                formatted_df.loc["Operating Profit", col] = formatted_df.loc["Sales", col] - formatted_df.loc["Expenses", col]
+                        
+                        # If we have Sales and Operating Profit but no Expenses, calculate it
+                        if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is not None:
+                            if formatted_df.loc["Expenses", col] is None:
+                                formatted_df.loc["Expenses", col] = formatted_df.loc["Sales", col] - formatted_df.loc["Operating Profit", col]
+                        
+                        # Calculate OPM % if we have both Sales and Operating Profit
+                        if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is not None:
+                            if formatted_df.loc["Sales", col] != 0:
+                                formatted_df.loc["OPM %", col] = (formatted_df.loc["Operating Profit", col] / formatted_df.loc["Sales", col]) * 100
+                        
+                        # Calculate Tax % if we have both Tax and Profit before tax
+                        if formatted_df.loc["Tax %", col] is not None and formatted_df.loc["Profit before tax", col] is not None:
+                            if isinstance(formatted_df.loc["Tax %", col], (int, float)) and isinstance(formatted_df.loc["Profit before tax", col], (int, float)):
+                                if formatted_df.loc["Profit before tax", col] != 0:
+                                    # Calculate actual tax percentage
+                                    formatted_df.loc["Tax %", col] = abs(formatted_df.loc["Tax %", col] / formatted_df.loc["Profit before tax", col] * 100)
+                    
+                    # Format values for display
+                    display_df = formatted_df.copy()
+                    for col in display_df.columns:
+                        for idx in display_df.index:
+                            value = display_df.loc[idx, col]
+                            
+                            # Format based on what type of value it is
+                            if pd.isna(value) or value is None:
                                 display_df.loc[idx, col] = "N/A"
-                        elif idx == "EPS in Rs":
-                            # Format EPS with 2 decimal places
-                            try:
-                                display_df.loc[idx, col] = f"{value:.2f}"
-                            except:
-                                display_df.loc[idx, col] = "N/A"
-                        else:
-                            # Format financial values with commas
-                            try:
-                                display_df.loc[idx, col] = f"{int(round(value)):,}"
-                            except:
-                                display_df.loc[idx, col] = "N/A"
+                            elif idx in ["OPM %", "Tax %", "Dividend Payout %"]:
+                                # Format percentages
+                                try:
+                                    display_df.loc[idx, col] = f"{int(round(value))}%"
+                                except:
+                                    display_df.loc[idx, col] = "N/A"
+                            elif idx == "EPS in Rs":
+                                # Format EPS with 2 decimal places
+                                try:
+                                    display_df.loc[idx, col] = f"{value:.2f}"
+                                except:
+                                    display_df.loc[idx, col] = "N/A"
+                            else:
+                                # Format financial values with commas
+                                try:
+                                    display_df.loc[idx, col] = f"{int(round(value)):,}"
+                                except:
+                                    display_df.loc[idx, col] = "N/A"
+                                    
+                    # If Yahoo Finance data, note the source
+                    if not is_indian or not screener_data_available:
+                        st.info("Using Yahoo Finance financial data")
                 
                 # Create HTML for the P&L table with styling
                 st.markdown("""
@@ -1221,25 +1243,7 @@ with main_tabs[2]:
                 
                 # Display the P&L table with real data
                 st.write(display_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-                
-                # If the display_df doesn't have much data, show the raw data as well
-                real_data_count = 0
-                for col in display_df.columns:
-                    for idx in display_df.index:
-                        if display_df.loc[idx, col] != "N/A":
-                            real_data_count += 1
-                
-                if real_data_count < 10:
-                    st.write("Showing raw financial data for reference:")
                     
-                    # Format raw income data for display
-                    display_income = income_data.copy()
-                    for col in display_income.columns:
-                        display_income[col] = display_income[col].apply(
-                            lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
-                        )
-                    st.dataframe(display_income, use_container_width=True)
-                
             except Exception as e:
                 st.error(f"Error displaying P&L statement: {str(e)}")
                 
@@ -1249,7 +1253,7 @@ with main_tabs[2]:
                     raw_income = ticker.financials
                     
                     if raw_income is not None and not raw_income.empty:
-                        st.write("Showing raw financial data:")
+                        st.write("Showing raw financial data from Yahoo Finance:")
                         for col in raw_income.columns:
                             raw_income[col] = raw_income[col].apply(
                                 lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
@@ -1261,7 +1265,7 @@ with main_tabs[2]:
                     st.warning("No financial data available for this stock.")
         
         # Display the P&L statement
-        display_pl_statement(stock_symbol)
+        display_pl_statement(stock_symbol, is_indian)
 
 # News & Sentiment Tab
 with main_tabs[3]:
