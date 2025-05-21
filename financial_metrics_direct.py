@@ -12,6 +12,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 import format_utils
 
+@st.cache_data(ttl=300)
 def get_financial_metrics(symbol, is_indian=False):
     """
     Calculate and compile financial metrics for a given stock
@@ -51,7 +52,8 @@ def get_financial_metrics(symbol, is_indian=False):
         return result
     
     except Exception as e:
-        st.error(f"Error calculating financial metrics: {str(e)}")
+        #st.error(f"Error calculating financial metrics: {str(e)}")
+        print(f"Error calculating financial metrics: {str(e)}")
         return None
 
 def get_valuation_metrics(info, is_indian):
