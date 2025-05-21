@@ -11,6 +11,7 @@ import indian_markets
 import stock_news
 import stock_prediction
 import format_utils
+import financial_data
 
 # Set page configuration
 st.set_page_config(
@@ -1006,138 +1007,81 @@ if not stock_data.empty:
         ), unsafe_allow_html=True)
         
         with st.spinner("Loading income statement..."):
-            try:
-                # Get ticker object
-                ticker = yf.Ticker(stock_symbol)
+            # Get the income statement data using our direct approach
+            income_statement_df = financial_data.get_income_statement(stock_symbol, is_indian)
+            
+            if income_statement_df is not None and not income_statement_df.empty:
+                # Display the income statement
+                st.dataframe(
+                    income_statement_df,
+                    use_container_width=True,
+                    hide_index=False
+                )
                 
-                # Get income statement data
-                income_stmt = ticker.income_stmt
+                # Display visualization for key metrics
+                st.markdown("### Key Income Statement Trends")
                 
-                if income_stmt is not None and not income_stmt.empty:
-                    # Format dates
-                    if isinstance(income_stmt.columns, pd.DatetimeIndex):
-                        income_stmt.columns = income_stmt.columns.strftime('%b %Y')
+                # Select key metrics to visualize (common ones found in Yahoo Finance)
+                key_metrics = [
+                    "Total Revenue", "Revenue", 
+                    "Gross Profit", 
+                    "Operating Income", "EBIT", 
+                    "Net Income", "Net Income Common Stockholders"
+                ]
+                
+                # Find metrics that exist in our dataframe
+                metrics_to_plot = []
+                for metric in key_metrics:
+                    if metric in income_statement_df.index:
+                        metrics_to_plot.append(metric)
+                        # Only need one from each category
+                        if "Total Revenue" in metrics_to_plot and "Revenue" in metrics_to_plot:
+                            metrics_to_plot.remove("Revenue")
+                        if "Operating Income" in metrics_to_plot and "EBIT" in metrics_to_plot:
+                            metrics_to_plot.remove("EBIT")
+                        if "Net Income" in metrics_to_plot and "Net Income Common Stockholders" in metrics_to_plot:
+                            metrics_to_plot.remove("Net Income Common Stockholders")
+                
+                if metrics_to_plot:
+                    # Convert string values back to numbers for plotting
+                    plot_data = income_statement_df.copy()
+                    for col in plot_data.columns:
+                        for idx in metrics_to_plot:
+                            if idx in plot_data.index:
+                                try:
+                                    val = plot_data.loc[idx, col]
+                                    if isinstance(val, str):
+                                        plot_data.loc[idx, col] = float(val.replace(',', ''))
+                                except:
+                                    plot_data.loc[idx, col] = None
                     
-                    # Convert values to appropriate scale
-                    formatted_income = income_stmt.copy()
+                    # Create visualization
+                    fig = go.Figure()
                     
-                    for col in formatted_income.columns:
-                        formatted_income[col] = formatted_income[col].apply(
-                            lambda x: x / 10000000 if is_indian else x / 1000000  # ₹ Crores for Indian, $ Millions for others
-                        )
-                    
-                    # Create a standardized P&L format with key metrics
-                    pl_items = [
-                        "Total Revenue", 
-                        "Cost of Revenue",
-                        "Gross Profit",
-                        "Operating Expense",
-                        "Operating Income",
-                        "Interest Expense", 
-                        "Income Before Tax",
-                        "Income Tax Expense", 
-                        "Net Income",
-                        "Basic EPS",
-                        "Diluted EPS"
-                    ]
-                    
-                    # Create a new DataFrame with our desired metrics
-                    pl_data = pd.DataFrame(index=pl_items)
-                    
-                    # Map Yahoo Finance data to our format
-                    mapping = {
-                        "Total Revenue": ["Total Revenue", "Revenue"],
-                        "Cost of Revenue": ["Cost Of Revenue", "Cost of Revenue"],
-                        "Gross Profit": ["Gross Profit"],
-                        "Operating Expense": ["Operating Expense", "Total Operating Expenses"],
-                        "Operating Income": ["Operating Income", "EBIT"],
-                        "Interest Expense": ["Interest Expense"],
-                        "Income Before Tax": ["Income Before Tax", "Pretax Income"],
-                        "Income Tax Expense": ["Income Tax Expense", "Tax Provision"],
-                        "Net Income": ["Net Income", "Net Income Common Stockholders"],
-                        "Basic EPS": ["Basic EPS"],
-                        "Diluted EPS": ["Diluted EPS", "EPS - Earnings Per Share"]
-                    }
-                    
-                    # Fill in our P&L DataFrame
-                    for pl_item in pl_items:
-                        for possible_key in mapping[pl_item]:
-                            if possible_key in formatted_income.index:
-                                pl_data.loc[pl_item] = formatted_income.loc[possible_key]
-                                break
-                    
-                    # Display the data
-                    st.dataframe(
-                        pl_data,
-                        use_container_width=True,
-                        hide_index=False,
-                        column_config={col: {"format": "%.2f"} for col in pl_data.columns}
-                    )
-                    
-                    # Display visualization for key metrics
-                    st.markdown("### Key Income Statement Trends")
-                    
-                    # Select key metrics to visualize
-                    key_metrics = ["Total Revenue", "Gross Profit", "Operating Income", "Net Income"]
-                    metrics_to_plot = [metric for metric in key_metrics if metric in pl_data.index]
-                    
-                    if metrics_to_plot:
-                        # Create visualization
-                        fig = go.Figure()
-                        
-                        for metric in metrics_to_plot:
+                    for metric in metrics_to_plot:
+                        if metric in plot_data.index:
                             fig.add_trace(go.Bar(
-                                x=pl_data.columns,
-                                y=pl_data.loc[metric],
+                                x=plot_data.columns,
+                                y=plot_data.loc[metric],
                                 name=metric
                             ))
-                        
-                        # Update layout
-                        fig.update_layout(
-                            title="Key Financial Metrics Over Time",
-                            xaxis_title="Reporting Period",
-                            yaxis_title=f"Value ({format_utils.format_currency(0, is_indian).strip('0')} {'Crores' if is_indian else 'Millions'})",
-                            legend_title="Metrics",
-                            height=400,
-                            template="plotly_white",
-                            barmode='group'
-                        )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                        
-                        # Calculate and display growth rates
-                        st.markdown("### Year-over-Year Growth Rates")
-                        
-                        growth_data = {}
-                        for metric in metrics_to_plot:
-                            values = pl_data.loc[metric].values
-                            growth = []
-                            for i in range(1, len(values)):
-                                if values[i-1] != 0 and not pd.isna(values[i-1]) and not pd.isna(values[i]):
-                                    growth.append((values[i] / values[i-1] - 1) * 100)
-                                else:
-                                    growth.append(None)
-                            growth_data[metric] = [None] + growth  # Add None for the first period (no YoY growth)
-                        
-                        growth_df = pd.DataFrame(growth_data, index=pl_data.columns)
-                        
-                        # Create a formatted version for display
-                        growth_df_display = growth_df.copy()
-                        for col in growth_df_display.columns:
-                            growth_df_display[col] = growth_df_display[col].apply(
-                                lambda x: f"{x:.2f}%" if pd.notna(x) else "N/A"
-                            )
-                        
-                        st.dataframe(
-                            growth_df_display,
-                            use_container_width=True
-                        )
-                    else:
-                        st.warning("Key metrics not available for visualization.")
+                    
+                    # Update layout
+                    fig.update_layout(
+                        title="Key Financial Metrics Over Time",
+                        xaxis_title="Reporting Period",
+                        yaxis_title=f"Value ({format_utils.format_currency(0, is_indian).strip('0')} {'Crores' if is_indian else 'Millions'})",
+                        legend_title="Metrics",
+                        height=400,
+                        template="plotly_white",
+                        barmode='group'
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Income statement data not available for this stock.")
-            except Exception as e:
-                st.error(f"Error loading income statement: {str(e)}")
+                    st.warning("No suitable metrics found for visualization.")
+            else:
+                st.warning("Income statement data not available for this stock. Please try another stock symbol.")
 
     # BALANCE SHEET TAB
     with main_tabs[3]:
@@ -1154,174 +1098,197 @@ if not stock_data.empty:
         ), unsafe_allow_html=True)
         
         with st.spinner("Loading balance sheet..."):
-            try:
-                # Get ticker object
-                ticker = yf.Ticker(stock_symbol)
+            # Get the balance sheet data using our direct approach
+            balance_sheet_df = financial_data.get_balance_sheet(stock_symbol, is_indian)
+            
+            if balance_sheet_df is not None and not balance_sheet_df.empty:
+                # Display the balance sheet
+                st.dataframe(
+                    balance_sheet_df,
+                    use_container_width=True,
+                    hide_index=False
+                )
                 
-                # Get balance sheet data
-                balance_sheet = ticker.balance_sheet
-                
-                if balance_sheet is not None and not balance_sheet.empty:
-                    # Format dates
-                    if isinstance(balance_sheet.columns, pd.DatetimeIndex):
-                        balance_sheet.columns = balance_sheet.columns.strftime('%b %Y')
-                    
-                    # Convert values to appropriate scale
-                    formatted_bs = balance_sheet.copy()
-                    
-                    for col in formatted_bs.columns:
-                        formatted_bs[col] = formatted_bs[col].apply(
-                            lambda x: x / 10000000 if is_indian else x / 1000000  # ₹ Crores for Indian, $ Millions for others
-                        )
-                    
-                    # Create a standardized balance sheet format with key metrics
-                    bs_items = [
-                        "Total Assets",
-                        "Total Current Assets",
-                        "Cash And Cash Equivalents",
-                        "Inventory",
-                        "Net Receivables",
-                        "Total Non Current Assets",
-                        "Property Plant & Equipment",
-                        "Investments",
-                        "Goodwill",
-                        "Total Liabilities",
-                        "Total Current Liabilities",
-                        "Accounts Payable",
-                        "Short Term Debt",
-                        "Total Non Current Liabilities",
-                        "Long Term Debt",
-                        "Total Stockholder Equity",
-                        "Retained Earnings",
-                        "Common Stock",
-                    ]
-                    
-                    # Create a new DataFrame with our desired metrics
-                    bs_data = pd.DataFrame(index=bs_items)
-                    
-                    # Map Yahoo Finance data to our format
-                    mapping = {
-                        "Total Assets": ["Total Assets"],
-                        "Total Current Assets": ["Total Current Assets"],
-                        "Cash And Cash Equivalents": ["Cash And Cash Equivalents", "Cash"],
-                        "Inventory": ["Inventory"],
-                        "Net Receivables": ["Net Receivables"],
-                        "Total Non Current Assets": ["Total Non Current Assets"],
-                        "Property Plant & Equipment": ["Property Plant & Equipment", "Net PPE"],
-                        "Investments": ["Investments", "Long Term Investments"],
-                        "Goodwill": ["Goodwill"], 
-                        "Total Liabilities": ["Total Liabilities"],
-                        "Total Current Liabilities": ["Total Current Liabilities"],
-                        "Accounts Payable": ["Accounts Payable"],
-                        "Short Term Debt": ["Short Term Debt"],
-                        "Total Non Current Liabilities": ["Total Non Current Liabilities", "Long Term Liabilities"],
-                        "Long Term Debt": ["Long Term Debt"],
-                        "Total Stockholder Equity": ["Total Stockholder Equity", "Stockholders Equity"],
-                        "Retained Earnings": ["Retained Earnings"],
-                        "Common Stock": ["Common Stock"]
-                    }
-                    
-                    # Fill in our balance sheet DataFrame
-                    for bs_item in bs_items:
-                        for possible_key in mapping[bs_item]:
-                            if possible_key in formatted_bs.index:
-                                bs_data.loc[bs_item] = formatted_bs.loc[possible_key]
-                                break
-                    
-                    # Display the data
-                    st.dataframe(
-                        bs_data,
-                        use_container_width=True,
-                        hide_index=False,
-                        column_config={col: {"format": "%.2f"} for col in bs_data.columns}
-                    )
-                    
-                    # Display visualization for key metrics
+                # Check if we have enough data for visualization
+                if len(balance_sheet_df.columns) > 0:
+                    # Display visualization for key categories
                     st.markdown("### Key Balance Sheet Categories")
                     
-                    # Create visualization of asset and liability composition for the most recent period
-                    latest_period = bs_data.columns[0]
+                    # Get the latest period
+                    latest_period = balance_sheet_df.columns[0]
                     
-                    # Asset composition
-                    st.markdown(f"#### Asset Composition ({latest_period})")
+                    # Define key categories we want to visualize
+                    asset_categories = [
+                        "Total Assets", "Assets",
+                        "Cash And Cash Equivalents", "Cash",
+                        "Net Receivables", 
+                        "Inventory",
+                        "Property Plant & Equipment", "Net PPE",
+                        "Investments", "Long Term Investments"
+                    ]
                     
-                    asset_items = {
-                        "Cash & Equivalents": bs_data.loc["Cash And Cash Equivalents", latest_period] if "Cash And Cash Equivalents" in bs_data.index else 0,
-                        "Receivables": bs_data.loc["Net Receivables", latest_period] if "Net Receivables" in bs_data.index else 0,
-                        "Inventory": bs_data.loc["Inventory", latest_period] if "Inventory" in bs_data.index else 0,
-                        "Property & Equipment": bs_data.loc["Property Plant & Equipment", latest_period] if "Property Plant & Equipment" in bs_data.index else 0,
-                        "Investments": bs_data.loc["Investments", latest_period] if "Investments" in bs_data.index else 0,
-                        "Goodwill": bs_data.loc["Goodwill", latest_period] if "Goodwill" in bs_data.index else 0,
-                        "Other Assets": bs_data.loc["Total Assets", latest_period] - sum([
-                            bs_data.loc["Cash And Cash Equivalents", latest_period] if "Cash And Cash Equivalents" in bs_data.index else 0,
-                            bs_data.loc["Net Receivables", latest_period] if "Net Receivables" in bs_data.index else 0,
-                            bs_data.loc["Inventory", latest_period] if "Inventory" in bs_data.index else 0,
-                            bs_data.loc["Property Plant & Equipment", latest_period] if "Property Plant & Equipment" in bs_data.index else 0,
-                            bs_data.loc["Investments", latest_period] if "Investments" in bs_data.index else 0,
-                            bs_data.loc["Goodwill", latest_period] if "Goodwill" in bs_data.index else 0
-                        ])
-                    }
+                    liability_equity_categories = [
+                        "Total Liabilities", "Liabilities",
+                        "Accounts Payable",
+                        "Short Term Debt",
+                        "Long Term Debt",
+                        "Total Stockholder Equity", "Stockholders Equity", "Total Equity"
+                    ]
                     
-                    # Remove any negative values (can happen due to calculation errors)
-                    asset_items = {k: max(0, v) if pd.notna(v) else 0 for k, v in asset_items.items()}
+                    # Find which categories exist in our data
+                    asset_items = {}
+                    for category in asset_categories:
+                        if category in balance_sheet_df.index and pd.notna(balance_sheet_df.loc[category, latest_period]):
+                            # Try to convert string to float if needed
+                            value = balance_sheet_df.loc[category, latest_period]
+                            if isinstance(value, str):
+                                try:
+                                    value = float(value.replace(',', ''))
+                                except:
+                                    value = 0
+                            asset_items[category] = value
                     
-                    # Create pie chart for assets
-                    fig_assets = go.Figure(data=[go.Pie(
-                        labels=list(asset_items.keys()),
-                        values=list(asset_items.values()),
-                        hole=.4,
-                        marker=dict(colors=['#FF6B1A', '#16C172', '#1B998B', '#2D3047', '#F05D5E', '#E7C7B0', '#5F5AA2'])
-                    )])
+                    liability_equity_items = {}
+                    for category in liability_equity_categories:
+                        if category in balance_sheet_df.index and pd.notna(balance_sheet_df.loc[category, latest_period]):
+                            # Try to convert string to float if needed
+                            value = balance_sheet_df.loc[category, latest_period]
+                            if isinstance(value, str):
+                                try:
+                                    value = float(value.replace(',', ''))
+                                except:
+                                    value = 0
+                            liability_equity_items[category] = value
                     
-                    fig_assets.update_layout(
-                        title=f"Asset Composition - {latest_period}",
-                        height=350,
-                        template="plotly_white"
-                    )
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.plotly_chart(fig_assets, use_container_width=True)
-                    
-                    # Liability & Equity composition
-                    with col2:
-                        st.markdown(f"#### Liability & Equity Composition ({latest_period})")
+                    # Only create visualizations if we have data
+                    if asset_items and liability_equity_items:
+                        col1, col2 = st.columns(2)
                         
-                        liability_equity_items = {
-                            "Short Term Debt": bs_data.loc["Short Term Debt", latest_period] if "Short Term Debt" in bs_data.index else 0,
-                            "Accounts Payable": bs_data.loc["Accounts Payable", latest_period] if "Accounts Payable" in bs_data.index else 0,
-                            "Long Term Debt": bs_data.loc["Long Term Debt", latest_period] if "Long Term Debt" in bs_data.index else 0,
-                            "Other Liabilities": bs_data.loc["Total Liabilities", latest_period] - sum([
-                                bs_data.loc["Short Term Debt", latest_period] if "Short Term Debt" in bs_data.index else 0,
-                                bs_data.loc["Accounts Payable", latest_period] if "Accounts Payable" in bs_data.index else 0,
-                                bs_data.loc["Long Term Debt", latest_period] if "Long Term Debt" in bs_data.index else 0
-                            ]) if "Total Liabilities" in bs_data.index else 0,
-                            "Total Equity": bs_data.loc["Total Stockholder Equity", latest_period] if "Total Stockholder Equity" in bs_data.index else 0
-                        }
+                        with col1:
+                            st.markdown(f"#### Asset Composition ({latest_period})")
+                            
+                            # Remove any negative values and duplicates
+                            asset_items_clean = {}
+                            
+                            # Prioritize which asset category to use
+                            if "Total Assets" in asset_items:
+                                asset_items_clean["Total Assets"] = max(0, asset_items["Total Assets"])
+                            elif "Assets" in asset_items:
+                                asset_items_clean["Total Assets"] = max(0, asset_items["Assets"])
+                            
+                            if "Cash And Cash Equivalents" in asset_items:
+                                asset_items_clean["Cash"] = max(0, asset_items["Cash And Cash Equivalents"])
+                            elif "Cash" in asset_items:
+                                asset_items_clean["Cash"] = max(0, asset_items["Cash"])
+                            
+                            if "Property Plant & Equipment" in asset_items:
+                                asset_items_clean["Property & Equipment"] = max(0, asset_items["Property Plant & Equipment"])
+                            elif "Net PPE" in asset_items:
+                                asset_items_clean["Property & Equipment"] = max(0, asset_items["Net PPE"])
+                            
+                            if "Net Receivables" in asset_items:
+                                asset_items_clean["Receivables"] = max(0, asset_items["Net Receivables"])
+                            
+                            if "Inventory" in asset_items:
+                                asset_items_clean["Inventory"] = max(0, asset_items["Inventory"])
+                                
+                            if "Investments" in asset_items:
+                                asset_items_clean["Investments"] = max(0, asset_items["Investments"])
+                            elif "Long Term Investments" in asset_items:
+                                asset_items_clean["Investments"] = max(0, asset_items["Long Term Investments"])
+                            
+                            # Calculate Other Assets
+                            total_assets = asset_items_clean.get("Total Assets", 0)
+                            specific_assets_sum = sum([v for k, v in asset_items_clean.items() if k != "Total Assets"])
+                            
+                            if total_assets > specific_assets_sum:
+                                asset_items_clean["Other Assets"] = total_assets - specific_assets_sum
+                            
+                            # Remove Total Assets for pie chart
+                            if "Total Assets" in asset_items_clean:
+                                del asset_items_clean["Total Assets"]
+                                
+                            # Only create pie chart if we have data
+                            if asset_items_clean:
+                                fig_assets = go.Figure(data=[go.Pie(
+                                    labels=list(asset_items_clean.keys()),
+                                    values=list(asset_items_clean.values()),
+                                    hole=.4,
+                                    marker=dict(colors=['#FF6B1A', '#16C172', '#1B998B', '#2D3047', '#F05D5E', '#E7C7B0', '#5F5AA2'])
+                                )])
+                                
+                                fig_assets.update_layout(
+                                    title=f"Asset Composition - {latest_period}",
+                                    height=350,
+                                    template="plotly_white"
+                                )
+                                
+                                st.plotly_chart(fig_assets, use_container_width=True)
+                            else:
+                                st.info("Not enough asset data available for visualization.")
                         
-                        # Remove any negative values
-                        liability_equity_items = {k: max(0, v) if pd.notna(v) else 0 for k, v in liability_equity_items.items()}
-                        
-                        # Create pie chart for liabilities and equity
-                        fig_liab_equity = go.Figure(data=[go.Pie(
-                            labels=list(liability_equity_items.keys()),
-                            values=list(liability_equity_items.values()),
-                            hole=.4,
-                            marker=dict(colors=['#F05D5E', '#2D3047', '#1B998B', '#FF6B1A', '#16C172'])
-                        )])
-                        
-                        fig_liab_equity.update_layout(
-                            title=f"Liability & Equity Composition - {latest_period}",
-                            height=350,
-                            template="plotly_white"
-                        )
-                        
-                        st.plotly_chart(fig_liab_equity, use_container_width=True)
-                else:
-                    st.warning("Balance sheet data not available for this stock.")
-            except Exception as e:
-                st.error(f"Error loading balance sheet: {str(e)}")
+                        with col2:
+                            st.markdown(f"#### Liability & Equity Composition ({latest_period})")
+                            
+                            # Clean up liability and equity items
+                            liab_equity_clean = {}
+                            
+                            # Prioritize categories
+                            if "Total Liabilities" in liability_equity_items:
+                                liab_equity_clean["Total Liabilities"] = max(0, liability_equity_items["Total Liabilities"])
+                            elif "Liabilities" in liability_equity_items:
+                                liab_equity_clean["Total Liabilities"] = max(0, liability_equity_items["Liabilities"])
+                            
+                            if "Total Stockholder Equity" in liability_equity_items:
+                                liab_equity_clean["Total Equity"] = max(0, liability_equity_items["Total Stockholder Equity"])
+                            elif "Stockholders Equity" in liability_equity_items:
+                                liab_equity_clean["Total Equity"] = max(0, liability_equity_items["Stockholders Equity"])
+                            elif "Total Equity" in liability_equity_items:
+                                liab_equity_clean["Total Equity"] = max(0, liability_equity_items["Total Equity"])
+                            
+                            if "Accounts Payable" in liability_equity_items:
+                                liab_equity_clean["Accounts Payable"] = max(0, liability_equity_items["Accounts Payable"])
+                            
+                            if "Short Term Debt" in liability_equity_items:
+                                liab_equity_clean["Short Term Debt"] = max(0, liability_equity_items["Short Term Debt"])
+                                
+                            if "Long Term Debt" in liability_equity_items:
+                                liab_equity_clean["Long Term Debt"] = max(0, liability_equity_items["Long Term Debt"])
+                            
+                            # Calculate Other Liabilities
+                            total_liabilities = liab_equity_clean.get("Total Liabilities", 0)
+                            specific_liabilities_sum = sum([v for k, v in liab_equity_clean.items() 
+                                                          if k != "Total Liabilities" and k != "Total Equity"])
+                            
+                            if total_liabilities > specific_liabilities_sum:
+                                liab_equity_clean["Other Liabilities"] = total_liabilities - specific_liabilities_sum
+                            
+                            # Remove Total Liabilities for pie chart
+                            if "Total Liabilities" in liab_equity_clean:
+                                del liab_equity_clean["Total Liabilities"]
+                            
+                            # Only create pie chart if we have data
+                            if liab_equity_clean:
+                                fig_liab_equity = go.Figure(data=[go.Pie(
+                                    labels=list(liab_equity_clean.keys()),
+                                    values=list(liab_equity_clean.values()),
+                                    hole=.4,
+                                    marker=dict(colors=['#F05D5E', '#2D3047', '#1B998B', '#FF6B1A', '#16C172'])
+                                )])
+                                
+                                fig_liab_equity.update_layout(
+                                    title=f"Liability & Equity Composition - {latest_period}",
+                                    height=350,
+                                    template="plotly_white"
+                                )
+                                
+                                st.plotly_chart(fig_liab_equity, use_container_width=True)
+                            else:
+                                st.info("Not enough liability data available for visualization.")
+                    else:
+                        st.info("Not enough data available for visualization.")
+            else:
+                st.warning("Balance sheet data not available for this stock. Please try another stock symbol.")
 
     # CASH FLOW TAB
     with main_tabs[4]:
@@ -1338,243 +1305,277 @@ if not stock_data.empty:
         ), unsafe_allow_html=True)
         
         with st.spinner("Loading cash flow statement..."):
-            try:
-                # Get ticker object
-                ticker = yf.Ticker(stock_symbol)
+            # Get the cash flow data using our direct approach
+            cash_flow_df = financial_data.get_cash_flow(stock_symbol, is_indian)
+            
+            if cash_flow_df is not None and not cash_flow_df.empty:
+                # Display the cash flow statement
+                st.dataframe(
+                    cash_flow_df,
+                    use_container_width=True,
+                    hide_index=False
+                )
                 
-                # Get cash flow data
-                cash_flow = ticker.cashflow
+                # Display visualization for key cash flow metrics
+                st.markdown("### Cash Flow Trends")
                 
-                if cash_flow is not None and not cash_flow.empty:
-                    # Format dates
-                    if isinstance(cash_flow.columns, pd.DatetimeIndex):
-                        cash_flow.columns = cash_flow.columns.strftime('%b %Y')
+                # Select key metrics to visualize (common ones found in Yahoo Finance)
+                key_metrics = [
+                    "Operating Cash Flow", "Total Cash From Operating Activities",
+                    "Investing Cash Flow", "Total Cash From Investing Activities",
+                    "Financing Cash Flow", "Total Cash From Financing Activities",
+                    "Free Cash Flow"
+                ]
+                
+                # Find metrics that exist in our dataframe
+                metrics_to_plot = []
+                for metric in key_metrics:
+                    if metric in cash_flow_df.index:
+                        metrics_to_plot.append(metric)
+                        # Only need one from each category
+                        if "Operating Cash Flow" in metrics_to_plot and "Total Cash From Operating Activities" in metrics_to_plot:
+                            metrics_to_plot.remove("Total Cash From Operating Activities")
+                        if "Investing Cash Flow" in metrics_to_plot and "Total Cash From Investing Activities" in metrics_to_plot:
+                            metrics_to_plot.remove("Total Cash From Investing Activities")
+                        if "Financing Cash Flow" in metrics_to_plot and "Total Cash From Financing Activities" in metrics_to_plot:
+                            metrics_to_plot.remove("Total Cash From Financing Activities")
+                
+                if metrics_to_plot and len(cash_flow_df.columns) > 0:
+                    # Convert string values back to numbers for plotting
+                    plot_data = cash_flow_df.copy()
+                    for col in plot_data.columns:
+                        for idx in metrics_to_plot:
+                            if idx in plot_data.index:
+                                try:
+                                    val = plot_data.loc[idx, col]
+                                    if isinstance(val, str):
+                                        plot_data.loc[idx, col] = float(val.replace(',', ''))
+                                except:
+                                    plot_data.loc[idx, col] = None
                     
-                    # Convert values to appropriate scale
-                    formatted_cf = cash_flow.copy()
+                    # Create visualization
+                    fig = go.Figure()
                     
-                    for col in formatted_cf.columns:
-                        formatted_cf[col] = formatted_cf[col].apply(
-                            lambda x: x / 10000000 if is_indian else x / 1000000  # ₹ Crores for Indian, $ Millions for others
-                        )
+                    for metric in metrics_to_plot:
+                        if metric in plot_data.index:
+                            fig.add_trace(go.Bar(
+                                x=plot_data.columns,
+                                y=plot_data.loc[metric],
+                                name=metric
+                            ))
                     
-                    # Create a standardized cash flow format with key metrics
-                    cf_items = [
-                        "Operating Cash Flow",
-                        "Net Income",
-                        "Depreciation And Amortization",
-                        "Change In Working Capital",
-                        "Investing Cash Flow",
-                        "Capital Expenditure",
-                        "Acquisitions",
-                        "Purchase Of Investment",
-                        "Sale Of Investment",
-                        "Financing Cash Flow",
-                        "Dividend Payout",
-                        "Stock Repurchase",
-                        "Debt Repayment",
-                        "Free Cash Flow"
-                    ]
-                    
-                    # Create a new DataFrame with our desired metrics
-                    cf_data = pd.DataFrame(index=cf_items)
-                    
-                    # Map Yahoo Finance data to our format
-                    mapping = {
-                        "Operating Cash Flow": ["Operating Cash Flow", "Total Cash From Operating Activities"],
-                        "Net Income": ["Net Income", "Net Income From Continuing Operations"],
-                        "Depreciation And Amortization": ["Depreciation And Amortization", "Depreciation"],
-                        "Change In Working Capital": ["Change In Working Capital"],
-                        "Investing Cash Flow": ["Investing Cash Flow", "Total Cash From Investing Activities"],
-                        "Capital Expenditure": ["Capital Expenditure", "Capital Expenditures"],
-                        "Acquisitions": ["Acquisitions", "Acquisitions Net"],
-                        "Purchase Of Investment": ["Purchase Of Investment", "Investments In Property Plant And Equipment"],
-                        "Sale Of Investment": ["Sale Of Investment", "Sale Of Investment Property"],
-                        "Financing Cash Flow": ["Financing Cash Flow", "Total Cash From Financing Activities"],
-                        "Dividend Payout": ["Dividend Payout", "Dividends Paid"],
-                        "Stock Repurchase": ["Stock Repurchase", "Repurchase Of Stock"],
-                        "Debt Repayment": ["Debt Repayment", "Repayments Of Long Term Debt"],
-                        "Free Cash Flow": ["Free Cash Flow"]
-                    }
-                    
-                    # Fill in our cash flow DataFrame
-                    for cf_item in cf_items:
-                        for possible_key in mapping[cf_item]:
-                            if possible_key in formatted_cf.index:
-                                cf_data.loc[cf_item] = formatted_cf.loc[possible_key]
-                                break
-                    
-                    # Display the data
-                    st.dataframe(
-                        cf_data,
-                        use_container_width=True,
-                        hide_index=False,
-                        column_config={col: {"format": "%.2f"} for col in cf_data.columns}
+                    # Update layout
+                    fig.update_layout(
+                        title="Cash Flow Trends Over Time",
+                        xaxis_title="Reporting Period",
+                        yaxis_title=f"Value ({format_utils.format_currency(0, is_indian).strip('0')} {'Crores' if is_indian else 'Millions'})",
+                        legend_title="Metrics",
+                        height=400,
+                        template="plotly_white",
+                        barmode='group'
                     )
                     
-                    # Visualize key cash flow metrics
-                    st.markdown("### Cash Flow Trends")
+                    st.plotly_chart(fig, use_container_width=True)
                     
-                    key_metrics = [
-                        "Operating Cash Flow", 
-                        "Investing Cash Flow", 
-                        "Financing Cash Flow", 
-                        "Free Cash Flow"
-                    ]
-                    
-                    metrics_to_plot = [metric for metric in key_metrics if metric in cf_data.index]
-                    
-                    if metrics_to_plot:
-                        # Prepare data for plotting
-                        plot_data = {}
-                        for metric in metrics_to_plot:
-                            if metric in cf_data.index:
-                                plot_data[metric] = cf_data.loc[metric].values
+                    # Cash flow composition breakdown
+                    if len(cash_flow_df.columns) > 0:
+                        latest_period = cash_flow_df.columns[0]
+                        st.markdown(f"### Cash Flow Composition ({latest_period})")
                         
-                        if plot_data:
-                            # Create figure with dual y-axes
-                            fig = go.Figure()
+                        # Identify operating cash flow components
+                        ocf_components = [
+                            "Net Income", "Net Income From Continuing Operations",
+                            "Depreciation And Amortization", "Depreciation",
+                            "Change In Working Capital", "Changes In Working Capital"
+                        ]
+                        
+                        # Create columns for visualizations
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("#### Cash Flow Components")
                             
-                            # Add bars for each metric
-                            for metric, values in plot_data.items():
-                                fig.add_trace(go.Bar(
-                                    x=cf_data.columns,
-                                    y=values,
-                                    name=metric
+                            # Try to find the main cash flow categories
+                            cf_categories = {}
+                            
+                            for cf_type in ["Operating Cash Flow", "Total Cash From Operating Activities"]:
+                                if cf_type in cash_flow_df.index and pd.notna(cash_flow_df.loc[cf_type, latest_period]):
+                                    try:
+                                        if isinstance(cash_flow_df.loc[cf_type, latest_period], str):
+                                            cf_categories["Operating"] = float(cash_flow_df.loc[cf_type, latest_period].replace(',', ''))
+                                        else:
+                                            cf_categories["Operating"] = float(cash_flow_df.loc[cf_type, latest_period])
+                                        break
+                                    except:
+                                        pass
+                            
+                            for cf_type in ["Investing Cash Flow", "Total Cash From Investing Activities"]:
+                                if cf_type in cash_flow_df.index and pd.notna(cash_flow_df.loc[cf_type, latest_period]):
+                                    try:
+                                        if isinstance(cash_flow_df.loc[cf_type, latest_period], str):
+                                            cf_categories["Investing"] = float(cash_flow_df.loc[cf_type, latest_period].replace(',', ''))
+                                        else:
+                                            cf_categories["Investing"] = float(cash_flow_df.loc[cf_type, latest_period])
+                                        break
+                                    except:
+                                        pass
+                            
+                            for cf_type in ["Financing Cash Flow", "Total Cash From Financing Activities"]:
+                                if cf_type in cash_flow_df.index and pd.notna(cash_flow_df.loc[cf_type, latest_period]):
+                                    try:
+                                        if isinstance(cash_flow_df.loc[cf_type, latest_period], str):
+                                            cf_categories["Financing"] = float(cash_flow_df.loc[cf_type, latest_period].replace(',', ''))
+                                        else:
+                                            cf_categories["Financing"] = float(cash_flow_df.loc[cf_type, latest_period])
+                                        break
+                                    except:
+                                        pass
+                            
+                            # Only create pie chart if we have at least two categories
+                            if len(cf_categories) >= 2:
+                                # Color the negative values differently
+                                colors = []
+                                for cat, value in cf_categories.items():
+                                    if value >= 0:
+                                        colors.append('#16C172')  # Green for positive
+                                    else:
+                                        colors.append('#F05D5E')  # Red for negative
+                                
+                                # Create absolute values for better visualization but keep the colors
+                                abs_categories = {k: abs(v) for k, v in cf_categories.items()}
+                                
+                                fig_cf_types = go.Figure(data=[go.Pie(
+                                    labels=list(abs_categories.keys()),
+                                    values=list(abs_categories.values()),
+                                    hole=.4,
+                                    marker=dict(colors=colors)
+                                )])
+                                
+                                fig_cf_types.update_layout(
+                                    title="Cash Flow Categories by Magnitude",
+                                    height=350,
+                                    template="plotly_white"
+                                )
+                                
+                                st.plotly_chart(fig_cf_types, use_container_width=True)
+                            else:
+                                st.info("Not enough cash flow categories for visualization.")
+                                
+                        with col2:
+                            st.markdown("#### Operating Cash Flow Details")
+                            
+                            # Collect operating cash flow components
+                            ocf_breakdown = {}
+                            
+                            for component in ocf_components:
+                                if component in cash_flow_df.index and pd.notna(cash_flow_df.loc[component, latest_period]):
+                                    try:
+                                        if isinstance(cash_flow_df.loc[component, latest_period], str):
+                                            val = float(cash_flow_df.loc[component, latest_period].replace(',', ''))
+                                        else:
+                                            val = float(cash_flow_df.loc[component, latest_period])
+                                        
+                                        # Use a more readable name for the component
+                                        if "Net Income" in component:
+                                            ocf_breakdown["Net Income"] = val
+                                        elif "Depreciation" in component:
+                                            ocf_breakdown["Depreciation & Amort."] = val
+                                        elif "Working Capital" in component:
+                                            ocf_breakdown["Working Capital"] = val
+                                    except:
+                                        pass
+                            
+                            # Calculate Operating CF value 
+                            ocf_value = None
+                            for cf_type in ["Operating Cash Flow", "Total Cash From Operating Activities"]:
+                                if cf_type in cash_flow_df.index and pd.notna(cash_flow_df.loc[cf_type, latest_period]):
+                                    try:
+                                        if isinstance(cash_flow_df.loc[cf_type, latest_period], str):
+                                            ocf_value = float(cash_flow_df.loc[cf_type, latest_period].replace(',', ''))
+                                        else:
+                                            ocf_value = float(cash_flow_df.loc[cf_type, latest_period])
+                                        break
+                                    except:
+                                        pass
+                            
+                            # If we have OCF value and components, add "Other" category
+                            if ocf_value is not None and ocf_breakdown:
+                                component_sum = sum(ocf_breakdown.values())
+                                if abs(ocf_value - component_sum) > 0.01:  # Check if there's a difference
+                                    ocf_breakdown["Other Components"] = ocf_value - component_sum
+                            
+                            # Only create waterfall chart if we have components
+                            if ocf_breakdown:
+                                # Create a waterfall chart for operating CF
+                                fig_ocf = go.Figure(go.Waterfall(
+                                    name="Operating Cash Flow", 
+                                    orientation="v",
+                                    measure=["relative"]*len(ocf_breakdown),
+                                    x=list(ocf_breakdown.keys()),
+                                    y=list(ocf_breakdown.values()),
+                                    connector={"line":{"color":"rgb(63, 63, 63)"}},
                                 ))
-                            
-                            # Update layout
-                            fig.update_layout(
-                                title="Cash Flow Trends Over Time",
-                                xaxis_title="Reporting Period",
-                                yaxis_title=f"Value ({format_utils.format_currency(0, is_indian).strip('0')} {'Crores' if is_indian else 'Millions'})",
-                                height=400,
-                                template="plotly_white",
-                                barmode='group'
-                            )
-                            
-                            st.plotly_chart(fig, use_container_width=True)
-                        else:
-                            st.warning("Cash flow metrics not available for visualization.")
-                    
-                    # Cash flow composition for the latest period
-                    latest_period = cf_data.columns[0]
-                    
-                    st.markdown(f"### Cash Flow Composition ({latest_period})")
-                    
-                    try:
-                        # Operating cash flow breakdown
-                        if "Operating Cash Flow" in cf_data.index:
-                            operating_items = {
-                                "Net Income": cf_data.loc["Net Income", latest_period] if "Net Income" in cf_data.index else 0,
-                                "Depreciation & Amortization": cf_data.loc["Depreciation And Amortization", latest_period] if "Depreciation And Amortization" in cf_data.index else 0,
-                                "Working Capital Changes": cf_data.loc["Change In Working Capital", latest_period] if "Change In Working Capital" in cf_data.index else 0,
-                                "Other Operating Activities": cf_data.loc["Operating Cash Flow", latest_period] - sum([
-                                    cf_data.loc["Net Income", latest_period] if "Net Income" in cf_data.index and pd.notna(cf_data.loc["Net Income", latest_period]) else 0,
-                                    cf_data.loc["Depreciation And Amortization", latest_period] if "Depreciation And Amortization" in cf_data.index and pd.notna(cf_data.loc["Depreciation And Amortization", latest_period]) else 0,
-                                    cf_data.loc["Change In Working Capital", latest_period] if "Change In Working Capital" in cf_data.index and pd.notna(cf_data.loc["Change In Working Capital", latest_period]) else 0
-                                ])
-                            }
-                            
-                            col1, col2 = st.columns(2)
-                            
-                            with col1:
-                                st.markdown("#### Operating Cash Flow Components")
                                 
-                                # Remove any negative values for the pie chart
-                                operating_items_filtered = {k: v for k, v in operating_items.items() if pd.notna(v) and v > 0}
+                                fig_ocf.update_layout(
+                                    title="Operating Cash Flow Breakdown",
+                                    showlegend=False,
+                                    height=350,
+                                    template="plotly_white"
+                                )
                                 
-                                if operating_items_filtered:
-                                    fig_operating = go.Figure(data=[go.Pie(
-                                        labels=list(operating_items_filtered.keys()),
-                                        values=list(operating_items_filtered.values()),
-                                        hole=.4,
-                                        marker=dict(colors=['#16C172', '#1B998B', '#2D3047', '#FF6B1A'])
-                                    )])
+                                st.plotly_chart(fig_ocf, use_container_width=True)
+                            else:
+                                st.info("Not enough operating cash flow details for visualization.")
+                                
+                            # Free Cash Flow trend if available
+                            if "Free Cash Flow" in cash_flow_df.index:
+                                st.markdown("#### Free Cash Flow Trend")
+                                
+                                try:
+                                    fcf_data = []
+                                    for col in cash_flow_df.columns:
+                                        if pd.notna(cash_flow_df.loc["Free Cash Flow", col]):
+                                            try:
+                                                if isinstance(cash_flow_df.loc["Free Cash Flow", col], str):
+                                                    val = float(cash_flow_df.loc["Free Cash Flow", col].replace(',', ''))
+                                                else:
+                                                    val = float(cash_flow_df.loc["Free Cash Flow", col])
+                                                fcf_data.append(val)
+                                            except:
+                                                fcf_data.append(None)
+                                        else:
+                                            fcf_data.append(None)
                                     
-                                    fig_operating.update_layout(
-                                        title="Operating Cash Flow Components",
-                                        height=350,
-                                        template="plotly_white"
-                                    )
-                                    
-                                    st.plotly_chart(fig_operating, use_container_width=True)
-                                else:
-                                    st.warning("Not enough positive cash flow components to display.")
-                            
-                            with col2:
-                                # Calculate cash flow coverage ratios
-                                st.markdown("#### Cash Flow Coverage Ratios")
-                                
-                                operating_cf = cf_data.loc["Operating Cash Flow", latest_period] if "Operating Cash Flow" in cf_data.index else None
-                                capex = abs(cf_data.loc["Capital Expenditure", latest_period]) if "Capital Expenditure" in cf_data.index else None
-                                dividend = abs(cf_data.loc["Dividend Payout", latest_period]) if "Dividend Payout" in cf_data.index else None
-                                long_term_debt = bs_data.loc["Long Term Debt", latest_period] if "Long Term Debt" in bs_data.index else None
-                                
-                                coverage_ratios = {}
-                                
-                                if operating_cf is not None and capex is not None and pd.notna(operating_cf) and pd.notna(capex) and capex != 0:
-                                    coverage_ratios["CapEx Coverage Ratio"] = f"{operating_cf / capex:.2f}x"
-                                else:
-                                    coverage_ratios["CapEx Coverage Ratio"] = "N/A"
-                                    
-                                if operating_cf is not None and dividend is not None and pd.notna(operating_cf) and pd.notna(dividend) and dividend != 0:
-                                    coverage_ratios["Dividend Coverage Ratio"] = f"{operating_cf / dividend:.2f}x"
-                                else:
-                                    coverage_ratios["Dividend Coverage Ratio"] = "N/A"
-                                    
-                                if operating_cf is not None and long_term_debt is not None and pd.notna(operating_cf) and pd.notna(long_term_debt) and long_term_debt != 0:
-                                    coverage_ratios["Debt Service Coverage"] = f"{operating_cf / (long_term_debt * 0.1):.2f}x"  # Assuming 10% of debt serviced annually
-                                else:
-                                    coverage_ratios["Debt Service Coverage"] = "N/A"
-                                
-                                # Display ratios
-                                st.markdown("""
-                                <div style="background:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:20px;">
-                                """, unsafe_allow_html=True)
-                                
-                                for ratio, value in coverage_ratios.items():
-                                    st.markdown(f"""
-                                    <div style="display:flex; justify-content:space-between; margin:10px 0;">
-                                        <span style="color:#555;">{ratio}</span>
-                                        <span style="font-weight:600;">{value}</span>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                                
-                                st.markdown("</div>", unsafe_allow_html=True)
-                                
-                                # Free Cash Flow trend
-                                if "Free Cash Flow" in cf_data.index:
-                                    st.markdown("#### Free Cash Flow Trend")
-                                    
-                                    fig_fcf = go.Figure()
-                                    
-                                    fig_fcf.add_trace(go.Scatter(
-                                        x=cf_data.columns,
-                                        y=cf_data.loc["Free Cash Flow"],
-                                        mode='lines+markers',
-                                        name='Free Cash Flow',
-                                        line=dict(color='#16C172', width=3),
-                                        marker=dict(size=8)
-                                    ))
-                                    
-                                    fig_fcf.update_layout(
-                                        title="Free Cash Flow Trend",
-                                        xaxis_title="Reporting Period",
-                                        yaxis_title=f"FCF ({format_utils.format_currency(0, is_indian).strip('0')} {'Crores' if is_indian else 'Millions'})",
-                                        height=150,
-                                        margin=dict(l=0, r=0, t=30, b=0),
-                                        template="plotly_white"
-                                    )
-                                    
-                                    st.plotly_chart(fig_fcf, use_container_width=True)
-                                
-                    except Exception as e:
-                        st.error(f"Error creating cash flow visualizations: {str(e)}")
+                                    if any(fcf_data):
+                                        fig_fcf = go.Figure()
+                                        
+                                        fig_fcf.add_trace(go.Scatter(
+                                            x=cash_flow_df.columns,
+                                            y=fcf_data,
+                                            mode='lines+markers',
+                                            name='Free Cash Flow',
+                                            line=dict(color='#16C172', width=3),
+                                            marker=dict(size=8)
+                                        ))
+                                        
+                                        fig_fcf.update_layout(
+                                            title="Free Cash Flow Trend",
+                                            xaxis_title="Reporting Period",
+                                            yaxis_title=f"FCF ({format_utils.format_currency(0, is_indian).strip('0')} {'Crores' if is_indian else 'Millions'})",
+                                            height=200,
+                                            margin=dict(l=10, r=10, t=40, b=20),
+                                            template="plotly_white"
+                                        )
+                                        
+                                        st.plotly_chart(fig_fcf, use_container_width=True)
+                                except:
+                                    st.info("Could not display Free Cash Flow trend.")
+                    else:
+                        st.info("Not enough data for Cash Flow composition visualization.")
                 else:
-                    st.warning("Cash flow statement data not available for this stock.")
-            except Exception as e:
-                st.error(f"Error loading cash flow statement: {str(e)}")
+                    st.warning("No suitable metrics found for visualization.")
+            else:
+                st.warning("Cash flow statement data not available for this stock. Please try another stock symbol.")
 
     # PEER COMPARISON TAB
     with main_tabs[5]:
