@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 from datetime import datetime, timedelta
+import json
 
 @st.cache_data(ttl=3600)
 def get_stock_data(ticker, period='1y'):
@@ -521,6 +522,90 @@ def get_cash_flow(ticker):
     except Exception as e:
         print(f"Error fetching cash flow statement: {e}")
         return pd.DataFrame()
+        
+def get_peer_symbols(symbol, sector, is_indian=False):
+    """
+    Get peer stock symbols based on sector
+    
+    Args:
+        symbol (str): Current stock symbol
+        sector (str): Stock sector
+        is_indian (bool): Whether it's an Indian stock
+        
+    Returns:
+        list: List of peer stock symbols
+    """
+    try:
+        # For Indian stocks
+        if is_indian:
+            indian_peers = {
+                'RELIANCE.NS': ['TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS'],
+                'TCS.NS': ['INFY.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS', 'LTI.NS'],
+                'INFY.NS': ['TCS.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS', 'MINDTREE.NS'],
+                'HDFCBANK.NS': ['ICICIBANK.NS', 'SBIN.NS', 'KOTAKBANK.NS', 'AXISBANK.NS', 'INDUSINDBK.NS'],
+                'BHARTIARTL.NS': ['IDEA.NS', 'RCOM.NS', 'MTNL.NS', 'TATACOMM.NS', 'GOOG'],
+                # Add more mappings as needed
+            }
+            
+            # Return predefined peers if available, otherwise use sector-based approach
+            if symbol in indian_peers:
+                return [peer for peer in indian_peers[symbol] if peer != symbol][:4]
+        
+        # Sector-based approach with hardcoded fallbacks
+        sector_peers = {
+            'Technology': ['AAPL', 'MSFT', 'GOOGL', 'FB', 'AMZN', 'NVDA', 'INTC', 'AMD', 'IBM', 'ORCL'],
+            'Financial Services': ['JPM', 'BAC', 'WFC', 'C', 'GS', 'MS', 'AXP', 'V', 'MA', 'BLK'],
+            'Healthcare': ['JNJ', 'PFE', 'MRK', 'ABT', 'UNH', 'ABBV', 'BMY', 'AMGN', 'MDT', 'GILD'],
+            'Consumer Cyclical': ['AMZN', 'HD', 'NKE', 'SBUX', 'MCD', 'BKNG', 'TGT', 'LOW', 'EBAY', 'ROST'],
+            'Industrials': ['BA', 'HON', 'UNP', 'UPS', 'CAT', 'GE', 'RTX', 'LMT', 'FDX', 'DE'],
+            'Communication Services': ['GOOGL', 'FB', 'NFLX', 'CMCSA', 'VZ', 'T', 'TMUS', 'DIS', 'EA', 'ATVI'],
+            'Consumer Defensive': ['WMT', 'PG', 'KO', 'PEP', 'COST', 'PM', 'MO', 'EL', 'CL', 'GIS'],
+            'Basic Materials': ['LIN', 'SHW', 'APD', 'ECL', 'NEM', 'DD', 'DOW', 'FCX', 'NUE', 'IP'],
+            'Energy': ['XOM', 'CVX', 'COP', 'SLB', 'EOG', 'PSX', 'MPC', 'OXY', 'KMI', 'VLO'],
+            'Real Estate': ['AMT', 'PLD', 'CCI', 'EQIX', 'PSA', 'SPG', 'O', 'DLR', 'WELL', 'AVB'],
+            'Utilities': ['NEE', 'DUK', 'SO', 'D', 'AEP', 'EXC', 'SRE', 'XEL', 'ED', 'WEC'],
+        }
+        
+        if not sector or sector not in sector_peers:
+            sector = 'Technology'  # Default sector
+            
+        # Convert to .NS suffix for Indian stocks
+        peer_list = sector_peers[sector]
+        if is_indian:
+            peer_list = [p + '.NS' for p in peer_list]
+            
+        # Remove the current symbol from the list
+        if symbol in peer_list:
+            peer_list.remove(symbol)
+            
+        # Return the first 4 peers
+        return peer_list[:4]
+        
+    except Exception as e:
+        print(f"Error getting peer symbols: {e}")
+        # Return default peers
+        default_peers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
+        if is_indian:
+            default_peers = ['TCS.NS', 'RELIANCE.NS', 'HDFCBANK.NS', 'INFY.NS']
+        return default_peers
+        
+def get_company_name(symbol):
+    """
+    Get company name from a stock symbol
+    
+    Args:
+        symbol (str): Stock symbol
+        
+    Returns:
+        str: Company name or the symbol if name not found
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        return info.get('shortName', info.get('longName', symbol))
+    except:
+        # If we can't get the name, just return the symbol
+        return symbol
 
 def find_value_in_statement(statement, possible_keys, column, default=0):
     """
