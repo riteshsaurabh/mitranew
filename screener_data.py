@@ -20,7 +20,19 @@ SYMBOL_MAPPING = {
     "INFY.NS": "INFY",
     "TCS.NS": "TCS",
     "HDFCBANK.NS": "HDFCBANK",
-    "ICICIBANK.NS": "ICICIBANK"
+    "ICICIBANK.NS": "ICICIBANK",
+    "SBIN.NS": "SBIN",
+    "TATASTEEL.NS": "TATASTEEL",
+    "TATAMOTORS.NS": "TATAMOTORS",
+    "HINDUNILVR.NS": "HINDUNILVR",
+    "BAJFINANCE.NS": "BAJFINANCE",
+    "BHARTIARTL.NS": "BHARTIARTL",
+    "AXISBANK.NS": "AXISBANK",
+    "MARUTI.NS": "MARUTI",
+    "KOTAKBANK.NS": "KOTAKBANK",
+    "ITC.NS": "ITC",
+    "WIPRO.NS": "WIPRO",
+    "HCLTECH.NS": "HCLTECH",
     # Add more mappings as needed
 }
 
@@ -77,31 +89,39 @@ def fetch_screener_company_data(symbol):
         
         # Extract company info
         company_info = {}
-        company_info['name'] = soup.find('h1').text.strip() if soup.find('h1') else 'N/A'
+        company_name_element = soup.find('h1')
+        if company_name_element:
+            company_info['name'] = company_name_element.get_text().strip()
+        else:
+            company_info['name'] = 'N/A'
         
         # Extract ratios and metrics
         ratios_section = soup.find('div', {'id': 'top-ratios'})
         if ratios_section:
             ratios = {}
-            for item in ratios_section.find_all('li'):
-                label = item.find('span', {'class': 'name'})
-                value = item.find('span', {'class': 'value'})
-                if label and value:
-                    ratios[label.text.strip()] = value.text.strip()
+            ratio_items = ratios_section.find_all('li')
+            for item in ratio_items:
+                label_element = item.find('span', {'class': 'name'})
+                value_element = item.find('span', {'class': 'value'})
+                if label_element and value_element:
+                    label_text = label_element.get_text().strip()
+                    value_text = value_element.get_text().strip()
+                    ratios[label_text] = value_text
             company_info['ratios'] = ratios
         
         # Look for JSON data in script tags - Screener often includes data in JSON format
         scripts = soup.find_all('script')
         for script in scripts:
-            if script.string and 'var data' in script.string:
+            script_content = script.string if hasattr(script, 'string') else None
+            if script_content and 'var data' in script_content:
                 # Extract and parse the JSON data
-                json_data = re.search(r'var data = ({.*?});', script.string, re.DOTALL)
-                if json_data:
+                json_match = re.search(r'var data = ({.*?});', script_content, re.DOTALL)
+                if json_match:
                     try:
-                        company_data = json.loads(json_data.group(1))
+                        company_data = json.loads(json_match.group(1))
                         company_info['data'] = company_data
-                    except json.JSONDecodeError:
-                        pass
+                    except json.JSONDecodeError as json_err:
+                        st.warning(f"Error parsing JSON data: {json_err}")
         
         # Return the complete company information
         return company_info

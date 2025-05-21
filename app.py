@@ -851,26 +851,116 @@ with main_tabs[2]:
         
         # Display subtitle for Cash Flow Statement
         if is_indian:
-            st.write("Consolidated Figures in Rs. Crores / View Standalone")
+            st.write("Consolidated Figures in Rs. Crores")
         else:
-            st.write("Consolidated Figures in $ Millions / View Standalone")
+            st.write("Consolidated Figures in $ Millions")
         
-        # Get raw cash flow data from Yahoo Finance
-        raw_cash_flow = utils.get_cash_flow(stock_symbol)
-        
-        # Define row labels matching the screenshot exactly
-        row_labels = [
-            "Cash from Operating Activity",
-            "Profit from operations",
-            "Receivables",
-            "Inventory",
-            "Payables",
-            "Working capital changes",
-            "Direct taxes",
-            "Cash from Investing Activity",
-            "Cash from Financing Activity",
-            "Net Cash Flow"
-        ]
+        # Define a function to display cash flow statement
+        def display_cash_flow(stock_symbol, is_indian=False):
+            try:
+                # First try to get data from Screener.in for Indian stocks
+                screener_data_available = False
+                if is_indian:
+                    with st.spinner("Fetching cash flow data from Screener.in..."):
+                        # Get Cash Flow data from Screener
+                        cf_df = screener_data.get_cash_flow(stock_symbol)
+                        
+                        # Check if we got data
+                        if not cf_df.empty:
+                            # Success message
+                            st.success("Using Screener.in cash flow data")
+                            
+                            # Format numbers with commas for better readability
+                            display_cf = cf_df.copy()
+                            
+                            for col in display_cf.columns:
+                                display_cf[col] = display_cf[col].apply(
+                                    lambda x: f"{int(x):,}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
+                                )
+                            
+                            # Define key rows we want to highlight
+                            operating_cf_row = None
+                            investing_cf_row = None
+                            financing_cf_row = None
+                            net_cf_row = None
+                            
+                            # Look for total rows
+                            for idx in display_cf.index:
+                                if "Cash from Operations" in idx or "Operating Activities" in idx:
+                                    operating_cf_row = idx
+                                if "Cash from Investing" in idx or "Investing Activities" in idx:
+                                    investing_cf_row = idx
+                                if "Cash from Financing" in idx or "Financing Activities" in idx:
+                                    financing_cf_row = idx
+                                if "Net Cash Flow" in idx or "Net Increase in Cash" in idx:
+                                    net_cf_row = idx
+                            
+                            # Create HTML for the cash flow table with styling
+                            st.markdown("""
+                            <style>
+                            .dataframe {
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-family: Arial, sans-serif;
+                            }
+                            .dataframe th, .dataframe td {
+                                text-align: right;
+                                padding: 8px;
+                                border: 1px solid #ddd;
+                            }
+                            .dataframe th {
+                                background-color: #f5f5f5;
+                            }
+                            .total-row {
+                                font-weight: bold;
+                                background-color: #f9f9f9;
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
+                            # Create HTML table with custom styling for important rows
+                            html_table = display_cf.to_html(classes='dataframe', escape=False)
+                            
+                            # Add special styling for important rows if found
+                            if operating_cf_row:
+                                html_table = html_table.replace(f'<tr>\n      <th>{operating_cf_row}</th>', 
+                                                              f'<tr class="total-row">\n      <th>{operating_cf_row}</th>')
+                            if investing_cf_row:
+                                html_table = html_table.replace(f'<tr>\n      <th>{investing_cf_row}</th>', 
+                                                              f'<tr class="total-row">\n      <th>{investing_cf_row}</th>')
+                            if financing_cf_row:
+                                html_table = html_table.replace(f'<tr>\n      <th>{financing_cf_row}</th>', 
+                                                              f'<tr class="total-row">\n      <th>{financing_cf_row}</th>')
+                            if net_cf_row:
+                                html_table = html_table.replace(f'<tr>\n      <th>{net_cf_row}</th>', 
+                                                              f'<tr class="total-row">\n      <th>{net_cf_row}</th>')
+                            
+                            # Display the table
+                            st.write(html_table, unsafe_allow_html=True)
+                            screener_data_available = True
+                            return
+                
+                # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
+                if not is_indian or not screener_data_available:
+                    # Get raw cash flow data from Yahoo Finance
+                    raw_cash_flow = utils.get_cash_flow(stock_symbol)
+                    
+                    if not raw_cash_flow.empty:
+                        st.info("Using Yahoo Finance cash flow data")
+                        
+                        # Define row labels matching the professional format
+                        row_labels = [
+                            "Cash from Operating Activity",
+                            "Profit from operations",
+                            "Receivables",
+                            "Inventory",
+                            "Payables",
+                            "Working capital changes",
+                            "Direct taxes",
+                            "Cash from Investing Activity",
+                            "Cash from Financing Activity",
+                            "Net Cash Flow"
+                        ]
         
         # Create years for columns - use up to 12 years like in the screenshot
         current_year = pd.Timestamp.now().year
