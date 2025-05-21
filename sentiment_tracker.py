@@ -270,31 +270,6 @@ def analyze_news_sentiment(stock_symbol, news_data=None):
             "description": f"Error analyzing news sentiment: {str(e)}"
         }
 
-def get_sentiment_emoji(percent_change):
-    """
-    Get sentiment emoji based on percentage change
-    
-    Args:
-        percent_change (float): Price change percentage
-        
-    Returns:
-        str: Emoji representing the sentiment
-    """
-    if percent_change > 3:
-        return "🚀"  # Very bullish
-    elif percent_change > 1:
-        return "😁"  # Bullish
-    elif percent_change > 0:
-        return "🙂"  # Slightly bullish
-    elif percent_change == 0:
-        return "😐"  # Neutral
-    elif percent_change > -1:
-        return "🙁"  # Slightly bearish
-    elif percent_change > -3:
-        return "😟"  # Bearish
-    else:
-        return "🧸"  # Very bearish (bear market)
-
 def get_market_mood_index(price_sentiment, volume_sentiment, news_sentiment=None):
     """
     Calculate an overall market mood index based on multiple sentiment indicators
