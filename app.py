@@ -390,7 +390,7 @@ if stock_symbol:
                                 nifty_symbol = "^NSEI"
                                 nifty_data = yf.download(nifty_symbol, start=start_date, end=end_date, progress=False)
                                 
-                                if not nifty_data.empty:
+                                if nifty_data is not None and not nifty_data.empty:
                                     # Normalize data for comparison
                                     normalized_stock = stock_data['Close'] / stock_data['Close'].iloc[0] * 100
                                     normalized_nifty = nifty_data['Close'] / nifty_data['Close'].iloc[0] * 100
@@ -454,7 +454,7 @@ if stock_symbol:
                                 sp500_symbol = "^GSPC"
                                 sp500_data = yf.download(sp500_symbol, start=start_date, end=end_date, progress=False)
                                 
-                                if not sp500_data.empty:
+                                if sp500_data is not None and not sp500_data.empty:
                                     # Normalize data for comparison
                                     normalized_stock = stock_data['Close'] / stock_data['Close'].iloc[0] * 100
                                     normalized_sp500 = sp500_data['Close'] / sp500_data['Close'].iloc[0] * 100
