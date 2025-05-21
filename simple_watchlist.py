@@ -50,29 +50,32 @@ def create_watchlist(name, description=""):
     save_watchlists(data)
     return True
 
-def add_to_watchlist(watchlist_id, symbol, company_name=""):
+def add_to_watchlist(symbol, company_name=""):
     """Add a stock to a watchlist"""
     data = load_watchlists()
     
-    # Find watchlist
-    for watchlist in data['watchlists']:
-        if watchlist['id'] == watchlist_id:
-            # Check if stock already in watchlist
-            for stock in watchlist['stocks']:
-                if stock['symbol'] == symbol:
-                    return True
-            
-            # Add stock
-            watchlist['stocks'].append({
-                'symbol': symbol,
-                'company_name': company_name,
-                'added_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-            
-            save_watchlists(data)
+    # If no watchlists, create default
+    if not data['watchlists']:
+        create_watchlist("Default Watchlist", "My default watchlist")
+        data = load_watchlists()
+    
+    # Add to first watchlist (default)
+    watchlist = data['watchlists'][0]
+    
+    # Check if stock already in watchlist
+    for stock in watchlist['stocks']:
+        if stock['symbol'] == symbol:
             return True
     
-    return False
+    # Add stock
+    watchlist['stocks'].append({
+        'symbol': symbol,
+        'company_name': company_name,
+        'added_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+    
+    save_watchlists(data)
+    return True
 
 def remove_from_watchlist(watchlist_id, symbol):
     """Remove a stock from a watchlist"""
@@ -96,6 +99,37 @@ def delete_watchlist(watchlist_id):
     data['watchlists'] = [w for w in data['watchlists'] if w['id'] != watchlist_id]
     save_watchlists(data)
     return True
+
+def display_watchlist_sidebar():
+    """Display watchlists in sidebar"""
+    st.markdown('<div style="text-align:center;"><h3 style="color:#1B998B;">Your Watchlists</h3></div>', unsafe_allow_html=True)
+    
+    watchlists = get_watchlists()
+    
+    if not watchlists:
+        st.info("No watchlists yet. Add stocks to create one!")
+        if st.button("Create Default Watchlist"):
+            create_watchlist("Default Watchlist", "My default watchlist")
+            st.success("Default watchlist created!")
+            st.rerun()
+    else:
+        # Display all watchlists
+        for watchlist in watchlists:
+            with st.expander(f"📋 {watchlist['name']} ({len(watchlist['stocks'])} stocks)"):
+                if watchlist['stocks']:
+                    for stock in watchlist['stocks']:
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            if st.button(f"{stock['symbol']}", key=f"sidebar_{stock['symbol']}"):
+                                st.session_state['selected_stock'] = stock['symbol']
+                                st.rerun()
+                        with col2:
+                            if st.button("🗑️", key=f"remove_{stock['symbol']}"):
+                                remove_from_watchlist(watchlist['id'], stock['symbol'])
+                                st.success(f"Removed {stock['symbol']}")
+                                st.rerun()
+                else:
+                    st.info("No stocks in this watchlist")
 
 def render_watchlist_section(current_stock):
     """Render the watchlist section of the dashboard"""
@@ -144,7 +178,7 @@ def render_watchlist_section(current_stock):
                     break
             
             if st.button(f"Add {current_stock} to {selected_watchlist}"):
-                if add_to_watchlist(selected_id, current_stock):
+                if add_to_watchlist(current_stock):
                     st.success(f"Added {current_stock} to {selected_watchlist}")
                     st.rerun()
                 else:
@@ -221,7 +255,7 @@ def render_watchlist_section(current_stock):
 if __name__ == "__main__":
     if not os.path.exists(WATCHLIST_FILE):
         create_watchlist("Default Watchlist", "My default watchlist")
-        add_to_watchlist(1, "AAPL", "Apple Inc.")
-        add_to_watchlist(1, "MSFT", "Microsoft Corporation") 
-        add_to_watchlist(1, "GOOGL", "Alphabet Inc.")
+        add_to_watchlist("AAPL", "Apple Inc.")
+        add_to_watchlist("MSFT", "Microsoft Corporation") 
+        add_to_watchlist("GOOGL", "Alphabet Inc.")
         print("Created default watchlist with sample stocks")
