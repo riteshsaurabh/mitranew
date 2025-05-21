@@ -1617,7 +1617,7 @@ if stock_symbol:
                                 st.markdown(f"""
                                 <div style="background:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:15px;">
                                     <h4 style="margin:0; color:#2D3047; font-size:1.2rem;">{news['title']}</h4>
-                                    <p style="margin:5px 0; color:#71717A; font-size:0.8rem;">{news['source']} • {news['published']}</p>
+                                    <p style="margin:5px 0; color:#71717A; font-size:0.8rem;">{news.get('publisher', 'Unknown')} • {news.get('date', '')}</p>
                                     <p style="margin:10px 0;">{news['summary']}</p>
                                     <a href="{news['link']}" target="_blank" style="color:#FF6B1A; text-decoration:none; font-weight:500;">
                                         Read more →
@@ -1631,7 +1631,7 @@ if stock_symbol:
                                 
                                 # Extract sentiment scores and sources
                                 sentiment_data = [
-                                    (news.get('sentiment', 'neutral'), news.get('source', 'Unknown'))
+                                    (news.get('sentiment', 'neutral'), news.get('publisher', 'Unknown'))
                                     for news in news_data
                                     if 'sentiment' in news
                                 ]
