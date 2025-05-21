@@ -1,13 +1,4 @@
-# Set page configuration - must be the first Streamlit command
 import streamlit as st
-st.set_page_config(
-    page_title="MoneyMitra - Your Financial Mitra",
-    page_icon="💰",
-    layout="centered",  # Using centered layout for medium mode
-    initial_sidebar_state="expanded",
-)
-
-# Then import other libraries
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
@@ -23,879 +14,993 @@ import format_utils
 import stock_prediction
 import sentiment_tracker
 import peer_comparison
-import screener_data  # New module for fetching data from Screener.in
+import screener_integration  # New module for fetching data from Screener.in
 
 # Load custom CSS
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-# Function to get peer stock symbols based on sector
-def get_peer_symbols(symbol, sector, is_indian=False):
-    """
-    Get peer stock symbols based on sector
+# App title and header
+st.title("MoneyMitra - Your Financial Mitra for Informed Investment Decisions")
+
+# App description
+description = """
+Welcome to MoneyMitra! This dashboard is designed to provide comprehensive stock analysis
+to help you make informed investment decisions. Enter a stock symbol below to get started.
+"""
+st.markdown(description)
+
+# Sidebar for input and navigation
+with st.sidebar:
+    st.header("Search Stocks")
     
-    Args:
-        symbol (str): Current stock symbol
-        sector (str): Stock sector
-        is_indian (bool): Whether it's an Indian stock
-        
-    Returns:
-        list: List of peer stock symbols
-    """
-    # Define peer stocks for different sectors (focusing on Indian markets)
-    peers = {
-        "Technology": ["INFY.NS", "TECHM.NS", "WIPRO.NS", "HCLTECH.NS"],  # Fixed TCS to TECHM
-        "Financial Services": ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS"],
-        "Consumer Goods": ["HINDUNILVR.NS", "ITC.NS", "DABUR.NS", "MARICO.NS"],
-        "Automotive": ["TATAMOTORS.NS", "MARUTI.NS", "M&M.NS", "HEROMOTOCO.NS"],
-        "Pharmaceuticals": ["SUNPHARMA.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS"],
-        "Energy": ["RELIANCE.NS", "ONGC.NS", "IOC.NS", "BPCL.NS"],
-        "Manufacturing": ["LT.NS", "ADANIENT.NS", "SIEMENS.NS", "ABB.NS"]
-    }
+    # Checkbox for Indian stocks
+    is_indian = st.checkbox("Indian Stock (NSE/BSE)", value=True)
     
-    # Handle US stocks (simplified example with popular tickers in each sector)
-    us_peers = {
-        "Technology": ["AAPL", "MSFT", "GOOGL", "AMZN", "META"],
-        "Financial Services": ["JPM", "BAC", "C", "WFC", "GS"],
-        "Healthcare": ["JNJ", "PFE", "MRK", "ABBV", "UNH"],
-        "Consumer Goods": ["PG", "KO", "PEP", "WMT", "COST"],
-        "Energy": ["XOM", "CVX", "COP", "EOG", "SLB"]
-    }
+    # Stock symbol input
+    stock_symbol = st.text_input("Enter Stock Symbol:", value="RELIANCE.NS" if is_indian else "AAPL")
     
+    # Search button
+    search_clicked = st.button("Analyze")
+    
+    # Default instructions based on market selection
     if is_indian:
-        # For Indian stocks
-        if sector in peers:
-            # Return only peers that are not the current stock
-            return [peer for peer in peers[sector] if peer != symbol]
-        else:
-            # Return default Indian peers if sector not found
-            return ["RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "TCS.NS", "HINDUNILVR.NS"]
+        st.info("""
+        **For Indian stocks:**
+        - NSE: Add .NS (e.g., RELIANCE.NS, TCS.NS)
+        - BSE: Add .BO (e.g., RELIANCE.BO)
+        """)
     else:
-        # For US stocks
-        if sector in us_peers:
-            return [peer for peer in us_peers[sector] if peer != symbol]
-        else:
-            # Return default US peers if sector not found
-            return ["AAPL", "MSFT", "AMZN", "GOOGL", "JPM"]
+        st.info("""
+        **For US stocks:**
+        - Just enter the symbol (e.g., AAPL, MSFT, GOOGL)
+        """)
 
-# Page configuration is already set at the top of the file
-# No need for duplicate configuration
-
-# Initialize session state for watchlist integration
-if 'selected_stock' not in st.session_state:
-    st.session_state['selected_stock'] = None
-
-# Load custom CSS
-with open('style.css') as f:
-    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-# Modern futuristic title and description
-st.markdown("""
-<div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="font-size: 3rem; font-weight: 800; background: linear-gradient(90deg, #FF6B1A, #FF3864); 
-               -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-               text-transform: uppercase; letter-spacing: -0.05em; margin-bottom: 0.5rem;">
-        MoneyMitra
-    </h1>
-    <p style="font-size: 1.2rem; color: #2D3047; font-weight: 400; max-width: 800px; margin: 0 auto;">
-        Your financial companion for smart investing decisions - quick, easy & informed
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# Modern header with futuristic design
-st.markdown("""
-<div style="background: linear-gradient(90deg, rgba(255,107,26,0.05) 0%, rgba(45,48,71,0.05) 100%); 
-            padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div style="flex: 1;">
-            <h3 style="margin:0; color:#2D3047; font-weight:600;">Real-Time Market Intelligence</h3>
-            <p style="margin-top:5px; color:#71717a; font-size:0.9rem;">
-                Powered by advanced financial data algorithms and multiple sources
-            </p>
-        </div>
-        <div style="background:#FF6B1A; color:white; padding:8px 16px; border-radius:40px; font-weight:600; font-size:0.8rem;">
-            LIVE DATA
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Modern search container
-st.markdown("""
-<div style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-    margin-bottom: 30px; border-left: 4px solid #FF6B1A;">
-    <h3 style="margin-top:0; color:#2D3047; font-weight:600; margin-bottom:15px;">
-        <span style="color:#FF6B1A; margin-right:10px;">📊</span>Find Your Investment
-    </h3>
-    <p style="color:#71717A; font-size:0.9rem; margin-bottom:20px;">
-        Enter stock symbol to analyze market performance and financial metrics
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# Input for stock symbol with modern styling
-col_symbol, col_period = st.columns([1, 1])
-
-with col_symbol:
-    # Check if a stock was selected from the watchlist
-    initial_value = st.session_state.get('selected_stock', 'RELIANCE.NS')
-    # Make sure initial_value is not None 
-    if initial_value is None:
-        initial_value = 'RELIANCE.NS'
-    
-    # Custom styled input
-    st.markdown('<p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Stock Symbol</p>', unsafe_allow_html=True)
-    stock_symbol = st.text_input("", initial_value, placeholder="e.g., RELIANCE.NS, TATAMOTORS.NS, INFY.NS").upper()
-    # Reset the selected stock after use
-    if st.session_state.get('selected_stock'):
-        st.session_state['selected_stock'] = None
-
-with col_period:
-    # Custom styled select box
-    st.markdown('<p style="font-weight:600; font-size:0.9rem; margin-bottom:8px;">Time Period</p>', unsafe_allow_html=True)
-    time_period = st.selectbox(
-        "",
-        ["1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"],
-        format_func=lambda x: {
-            "1mo": "1 Month",
-            "3mo": "3 Months",
-            "6mo": "6 Months",
-            "1y": "1 Year",
-            "2y": "2 Years",
-            "5y": "5 Years",
-            "10y": "10 Years",
-            "ytd": "Year to Date",
-            "max": "Maximum"
-        }[x]
-    )
-
-# Load data with status indicator
-with st.spinner(f"Loading data for {stock_symbol}..."):
+# Main content
+if stock_symbol:
     try:
-        # Check if it's an Indian stock
-        is_indian = indian_markets.is_indian_symbol(stock_symbol) or '.NS' in stock_symbol or '.BO' in stock_symbol
-        
-        if is_indian:
-            # Get Indian stock data
-            stock_data = indian_markets.get_indian_stock_data(stock_symbol, time_period)
-            if stock_data is not None and not stock_data.empty:
-                company_info = indian_markets.get_indian_company_info(stock_symbol)
-            else:
-                st.error(f"Unable to fetch data for {stock_symbol}. Please check the symbol and try again.")
-                st.stop()
-        else:
-            # For non-Indian stocks
-            ticker = yf.Ticker(stock_symbol)
-            stock_data = ticker.history(period=time_period)
-            if stock_data is not None and not stock_data.empty:
-                company_info = ticker.info
-            else:
-                st.error(f"Unable to fetch data for {stock_symbol}. Please check the symbol and try again.")
-                st.stop()
-        
-        # Ensure we have enough data for analysis (at least 10 data points)
-        if len(stock_data) < 10:
-            st.warning(f"Limited data available for {stock_symbol} over the selected time period. Some analyses may be incomplete.")
-        
-        # Extract sector for peer comparison
-        sector = company_info.get('sector', 'Unknown')
-        
-        # Get list of peer symbols
-        peer_symbols = get_peer_symbols(stock_symbol, sector, is_indian)
-        
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        st.stop()
-
-# Main dashboard container with tabs
-main_tabs = st.tabs([
-    "📊 Overview", 
-    "📈 Price Analysis", 
-    "📃 Financial Statements", 
-    "📰 News & Sentiment", 
-    "👥 Peer Comparison", 
-    "📋 SWOT Analysis"
-])
-
-# Dashboard Overview Tab
-with main_tabs[0]:
-    # Overview section
-    st.header("Company Overview")
-    
-    overview_col1, overview_col2 = st.columns([2, 1])
-    
-    with overview_col1:
-        if 'longName' in company_info:
-            st.subheader(company_info.get('longName', stock_symbol))
+        # Loading spinner
+        with st.spinner(f"Fetching data for {stock_symbol}..."):
+            # Get stock data
+            stock_data = utils.get_stock_data(stock_symbol, period="1y")
             
-        st.write(company_info.get('longBusinessSummary', 'No company description available.'))
+            if stock_data.empty:
+                st.error(f"Could not fetch data for {stock_symbol}. Please check the symbol and try again.")
+                st.stop()
+            
+            # Check if it's an Indian stock (if not specified)
+            if not is_indian and indian_markets.is_indian_symbol(stock_symbol):
+                is_indian = True
+                st.warning(f"Detected an Indian stock. Switching to Indian market mode.")
+            
+            # Get company info
+            company_info = utils.get_company_info(stock_symbol)
+            
+            # Calculate financial metrics
+            metrics = financial_metrics.get_financial_metrics(stock_symbol)
+    
+        # Display company name and logo
+        col1, col2 = st.columns([3, 1])
         
-        # Metrics row
-        metrics_row = st.columns(4)
-        with metrics_row[0]:
+        with col1:
+            company_name = company_info.get('shortName', stock_symbol)
+            st.header(company_name)
+            st.subheader(company_info.get('sector', 'Sector not available') + " | " + company_info.get('industry', 'Industry not available'))
+            
+        with col2:
+            # Show market status
             if is_indian:
-                # For Indian stocks, show price in Rupees
-                price_value = stock_data['Close'].iloc[-1]
-                price_change = ((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100
-                st.metric("Current Price", f"₹{price_value:.2f}", f"{price_change:.2f}%")
+                market = "NSE" if ".NS" in stock_symbol else "BSE" if ".BO" in stock_symbol else "Indian Market"
             else:
-                st.metric("Current Price", f"${stock_data['Close'].iloc[-1]:.2f}", 
-                        f"{((stock_data['Close'].iloc[-1] / stock_data['Close'].iloc[0]) - 1) * 100:.2f}%")
-        with metrics_row[1]:
+                market = company_info.get('exchange', 'US Market')
+            
+            st.info(f"Listed on: {market}")
+    
+        # Display stock data in the main content area
+        
+        # Create tabs for different sections
+        overview_tab, charts_tab, financials_tab, news_tab, peer_comparison_tab = st.tabs([
+            "Overview", "Charts", "Financials", "News & Sentiment", "Peer Comparison"
+        ])
+        
+        # OVERVIEW TAB
+        with overview_tab:
+            st.subheader("Current Stock Summary")
+            
+            # Current price and daily change
+            current_price = stock_data['Close'].iloc[-1]
+            previous_close = stock_data['Close'].iloc[-2]
+            price_change = current_price - previous_close
+            price_change_pct = (price_change / previous_close) * 100
+            
+            # Format currency based on market
             if is_indian:
-                # Format market cap in Indian style (Cr, L)
-                market_cap = company_info.get('marketCap')
-                if market_cap is not None:
-                    st.metric("Market Cap", indian_markets.format_inr(market_cap))
+                price_str = f"₹{format_utils.format_number(current_price, decimal_places=2)}"
+                change_str = f"{format_utils.format_number(price_change, decimal_places=2)} ({format_utils.format_number(price_change_pct, decimal_places=2)}%)"
+            else:
+                price_str = f"${format_utils.format_number(current_price, decimal_places=2)}"
+                change_str = f"{format_utils.format_number(price_change, decimal_places=2)} ({format_utils.format_number(price_change_pct, decimal_places=2)}%)"
+            
+            # Color for price change
+            if price_change >= 0:
+                change_color = "green"
+                change_icon = "↑"
+            else:
+                change_color = "red"
+                change_icon = "↓"
+            
+            # Create three columns for price information
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Current Price", price_str)
+            
+            with col2:
+                st.markdown(f"<h3 style='color: {change_color};'>{change_icon} {change_str}</h3>", unsafe_allow_html=True)
+            
+            with col3:
+                # Combine the emoji with the current price's description
+                sentiment_emoji = sentiment_tracker.get_sentiment_emoji(price_change_pct)
+                st.markdown(f"<h3>{sentiment_emoji} Market Sentiment</h3>", unsafe_allow_html=True)
+            
+            # Create columns for key metrics
+            st.subheader("Key Metrics")
+            metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
+            
+            # Display metrics in the columns
+            with metrics_col1:
+                # Market Cap
+                market_cap = company_info.get('marketCap', None)
+                if market_cap:
+                    if is_indian:
+                        # Convert to Indian format (Crores)
+                        market_cap_str = format_utils.format_large_number(market_cap, is_indian=True)
+                        st.metric("Market Cap", market_cap_str)
+                    else:
+                        # Format in billions USD
+                        market_cap_str = format_utils.format_large_number(market_cap)
+                        st.metric("Market Cap", market_cap_str)
                 else:
                     st.metric("Market Cap", "N/A")
-            else:
-                st.metric("Market Cap", format_utils.format_large_number(company_info.get('marketCap', 'N/A'), is_indian=is_indian))
-        with metrics_row[2]:
-            pe_ratio = company_info.get('trailingPE')
-            st.metric("P/E Ratio", format_utils.format_number(pe_ratio))
-        with metrics_row[3]:
-            if is_indian:
-                low = company_info.get('fiftyTwoWeekLow')
-                high = company_info.get('fiftyTwoWeekHigh')
-                if all(isinstance(val, (int, float)) for val in [low, high] if val is not None):
-                    st.metric("52W Range", f"₹{format_utils.format_number(low)} - ₹{format_utils.format_number(high)}")
+                
+                # P/E Ratio
+                pe_ratio = company_info.get('trailingPE', None)
+                if pe_ratio:
+                    st.metric("P/E Ratio", format_utils.format_number(pe_ratio))
                 else:
-                    st.metric("52W Range", "N/A")
-            else:
-                low = company_info.get('fiftyTwoWeekLow')
-                high = company_info.get('fiftyTwoWeekHigh')
-                if all(isinstance(val, (int, float)) for val in [low, high] if val is not None):
-                    st.metric("52W Range", f"${format_utils.format_number(low)} - ${format_utils.format_number(high)}")
+                    st.metric("P/E Ratio", "N/A")
+            
+            with metrics_col2:
+                # 52-week high
+                week_high = company_info.get('fiftyTwoWeekHigh', None)
+                if week_high:
+                    if is_indian:
+                        week_high_str = f"₹{format_utils.format_number(week_high, decimal_places=2)}"
+                    else:
+                        week_high_str = f"${format_utils.format_number(week_high, decimal_places=2)}"
+                    st.metric("52-Week High", week_high_str)
                 else:
-                    st.metric("52W Range", "N/A")
-    
-    with overview_col2:
-        # Display stock chart
-        fig = utils.create_price_chart(stock_data, company_info.get('shortName', stock_symbol), is_indian=is_indian)
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Quick actions section
-        st.markdown("### Quick Actions")
-        button_cols = st.columns(2)
-        with button_cols[0]:
-            if st.button("📥 Add to Watchlist", key="add_to_watchlist"):
-                # Render the watchlist functionality
-                st.session_state['show_watchlist'] = True
-        
-        with button_cols[1]:
-            if st.button("📊 Download Data", key="download_data"):
-                csv = stock_data.to_csv()
-                st.download_button(
-                    label="Download CSV",
-                    data=csv,
-                    file_name=f"{stock_symbol}_data.csv",
-                    mime="text/csv",
-                )
-    
-    # Render watchlist section if needed
-    if st.session_state.get('show_watchlist', False):
-        simple_watchlist.render_watchlist_section(stock_symbol)
-    
-    # Financial metrics section in overview tab
-    st.header("Key Financial Metrics")
-    
-    try:
-        # Get financial metrics
-        metrics = financial_metrics.get_financial_metrics(stock_symbol)
-        
-        # Create tabs for different metric categories
-        metric_tabs = st.tabs(["Key Ratios", "Performance", "Valuation", "Growth", "Efficiency"])
-        
-        # Key Ratios Tab
-        with metric_tabs[0]:
-            if 'key_ratios' in metrics and metrics['key_ratios']:
-                utils.display_metrics_cards(metrics['key_ratios'], "Key Financial Ratios", is_indian=is_indian)
-            else:
-                st.info("Key ratio data is not available for this stock.")
-        
-        # Performance Tab
-        with metric_tabs[1]:
-            if 'performance' in metrics and metrics['performance']:
-                utils.display_metrics_cards(metrics['performance'], "Performance Metrics", is_indian=is_indian)
-            else:
-                st.info("Performance metrics are not available for this stock.")
+                    st.metric("52-Week High", "N/A")
                 
-        # Valuation Tab
-        with metric_tabs[2]:
-            if 'valuation' in metrics and metrics['valuation']:
-                utils.display_metrics_cards(metrics['valuation'], "Valuation Metrics", is_indian=is_indian)
-            else:
-                st.info("Valuation metrics are not available for this stock.")
+                # EPS
+                eps = company_info.get('trailingEps', None)
+                if eps:
+                    if is_indian:
+                        eps_str = f"₹{format_utils.format_number(eps, decimal_places=2)}"
+                    else:
+                        eps_str = f"${format_utils.format_number(eps, decimal_places=2)}"
+                    st.metric("EPS (TTM)", eps_str)
+                else:
+                    st.metric("EPS (TTM)", "N/A")
+            
+            with metrics_col3:
+                # 52-week low
+                week_low = company_info.get('fiftyTwoWeekLow', None)
+                if week_low:
+                    if is_indian:
+                        week_low_str = f"₹{format_utils.format_number(week_low, decimal_places=2)}"
+                    else:
+                        week_low_str = f"${format_utils.format_number(week_low, decimal_places=2)}"
+                    st.metric("52-Week Low", week_low_str)
+                else:
+                    st.metric("52-Week Low", "N/A")
                 
-        # Growth Tab
-        with metric_tabs[3]:
-            if 'growth' in metrics and metrics['growth']:
-                utils.display_metrics_cards(metrics['growth'], "Growth Metrics")
-            else:
-                st.info("Growth metrics are not available for this stock.")
+                # Dividend Yield
+                dividend_yield = company_info.get('dividendYield', None)
+                if dividend_yield:
+                    dividend_str = f"{format_utils.format_percent(dividend_yield)}"
+                    st.metric("Dividend Yield", dividend_str)
+                else:
+                    st.metric("Dividend Yield", "N/A")
+            
+            with metrics_col4:
+                # Volume
+                volume = stock_data['Volume'].iloc[-1]
+                if volume:
+                    volume_str = format_utils.format_large_number(volume, decimal_places=0)
+                    st.metric("Volume", volume_str)
+                else:
+                    st.metric("Volume", "N/A")
                 
-        # Efficiency Tab
-        with metric_tabs[4]:
-            if 'efficiency' in metrics and metrics['efficiency']:
-                utils.display_metrics_cards(metrics['efficiency'], "Efficiency Metrics")
-            else:
-                st.info("Efficiency metrics are not available for this stock.")
-    
-    except Exception as e:
-        st.error(f"Error loading financial metrics: {str(e)}")
-
-# Price Analysis Tab
-with main_tabs[1]:
-    # Price Analysis section
-    st.header("Price Analysis")
-    
-    # Chart options
-    chart_col1, chart_col2, chart_col3 = st.columns([1, 1, 1])
-    
-    with chart_col1:
-        chart_type = st.selectbox(
-            "Chart Type",
-            ["Candlestick", "Line", "OHLC", "Area"]
-        )
-    
-    with chart_col2:
-        indicators = st.multiselect(
-            "Technical Indicators",
-            ["Moving Average", "Bollinger Bands", "RSI", "MACD", "Volume"],
-            default=["Moving Average", "Volume"]
-        )
-    
-    with chart_col3:
-        if "Moving Average" in indicators:
-            ma_periods = st.multiselect(
-                "MA Periods",
-                [5, 10, 20, 50, 100, 200],
-                default=[20, 50]
+                # Beta
+                beta = company_info.get('beta', None)
+                if beta:
+                    st.metric("Beta", format_utils.format_number(beta))
+                else:
+                    st.metric("Beta", "N/A")
+            
+            # Company description
+            st.subheader("About the Company")
+            company_description = company_info.get('longBusinessSummary', 'No description available.')
+            st.write(company_description)
+            
+        # CHARTS TAB
+        with charts_tab:
+            st.subheader("Stock Price Chart")
+            
+            # Create time frame selection
+            timeframe = st.radio(
+                "Select Time Frame:",
+                ["1 Month", "3 Months", "6 Months", "YTD", "1 Year", "3 Years", "5 Years", "Max"],
+                horizontal=True
             )
-        else:
-            ma_periods = []
-    
-    # Display the selected chart
-    try:
-        fig = utils.create_technical_chart(
-            stock_data, 
-            chart_title=f"{company_info.get('shortName', stock_symbol)} - {chart_type} Chart",
-            chart_type=chart_type.lower(),
-            indicators=indicators,
-            ma_periods=ma_periods,
-            is_indian=is_indian
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.error(f"Error creating chart: {str(e)}")
-    
-    # Statistics section
-    st.subheader("Price Statistics")
-    
-    stats_col1, stats_col2 = st.columns(2)
-    
-    with stats_col1:
-        # Calculate basic statistics
-        stats = stock_data['Close'].describe()
-        
-        # Format values based on currency
-        currency = "₹" if is_indian else "$"
-        
-        st.write("**Basic Statistics**")
-        metrics_data = {
-            "Mean": format_utils.format_currency(stats['mean'], is_indian=is_indian),
-            "Median": format_utils.format_currency(stock_data['Close'].median(), is_indian=is_indian),
-            "Std Dev": format_utils.format_currency(stats['std'], is_indian=is_indian),
-            "Min": format_utils.format_currency(stats['min'], is_indian=is_indian),
-            "Max": format_utils.format_currency(stats['max'], is_indian=is_indian)
-        }
-        utils.display_metrics_cards(metrics_data, "")
-    
-    with stats_col2:
-        # Calculate returns statistics
-        daily_returns = stock_data['Close'].pct_change().dropna()
-        
-        st.write("**Returns Analysis**")
-        metrics_data = {
-            "Daily Avg Return": format_utils.format_percent(daily_returns.mean()),
-            "Daily Volatility": format_utils.format_percent(daily_returns.std()),
-            "Max Daily Gain": format_utils.format_percent(daily_returns.max()),
-            "Max Daily Loss": format_utils.format_percent(daily_returns.min()),
-            "Positive Days": f"{(daily_returns > 0).sum()} ({format_utils.format_percent((daily_returns > 0).mean())})"
-        }
-        utils.display_metrics_cards(metrics_data, "")
-
-# Financial Statements Tab
-with main_tabs[2]:
-    # Financial statements section
-    st.header("Financial Statements")
-    
-    statement_tabs = st.tabs(["Income Statement", "Balance Sheet", "Cash Flow", "Profit & Loss"])
-    
-    with statement_tabs[0]:
-        st.subheader("Income Statement")
-        
-        # Display subtitle for Income Statement
-        if is_indian:
-            st.write("Consolidated Figures in Rs. Crores / View Standalone")
-        else:
-            st.write("Consolidated Figures in $ Millions / View Standalone")
-        
-        # Get raw income statement data from Yahoo Finance
-        raw_income_statement = utils.get_income_statement(stock_symbol)
-        
-        # Define row labels for income statement in the right order
-        row_labels = [
-            "Revenue",
-            "Cost of Revenue",
-            "Gross Profit",
-            "Research & Development",
-            "Selling, General & Admin",
-            "Operating Expenses",
-            "Operating Income",
-            "Interest Expense",
-            "Other Income/Expense",
-            "Income Before Tax",
-            "Income Tax Expense",
-            "Net Income",
-            "EPS (Basic)",
-            "EPS (Diluted)",
-            "Shares Outstanding"
-        ]
-        
-        # Create column headers for 10 years
-        current_year = pd.Timestamp.now().year
-        num_years = 10
-        year_labels = [f'Mar {y}' for y in range(current_year, current_year-num_years, -1)]
-        
-        try:
-            # Create income statement data dictionary
-            is_data = {}
             
-            # Extract relevant income statement data from Yahoo Finance if available
-            if not raw_income_statement.empty:
-                # Check for total revenue - our main data point
-                revenue_key = None
-                for key in ['TotalRevenue', 'Revenue', 'GrossRevenue']:
-                    if key in raw_income_statement.index:
-                        revenue_key = key
-                        break
-                
-                if revenue_key:
-                    # Extract values and limit to the number of years we want to display
-                    revenues = raw_income_statement.loc[revenue_key].tolist()
-                    revenues = revenues[:min(len(revenues), len(year_labels))]
-                    
-                    # Fill data for each year
-                    for i, year in enumerate(year_labels[:len(revenues)]):
-                        if i < len(revenues):
-                            revenue = float(revenues[i])
-                            
-                            # Convert to appropriate unit
-                            if is_indian:
-                                # Convert to crores (1 crore = 10 million) for Indian stocks
-                                divisor = 10000000
-                            else:
-                                # Convert to millions for non-Indian stocks
-                                divisor = 1000000
-                                
-                            revenue = revenue / divisor
-                            
-                            # Create income statement entries with real data where available
-                            is_data[year] = []
-                            
-                            # Try to get actual values for each item
-                            items = {
-                                "Revenue": revenue,
-                                "Cost of Revenue": None,
-                                "Gross Profit": None,
-                                "Research & Development": None,
-                                "Selling, General & Admin": None,
-                                "Operating Expenses": None,
-                                "Operating Income": None,
-                                "Interest Expense": None,
-                                "Other Income/Expense": None,
-                                "Income Before Tax": None,
-                                "Income Tax Expense": None,
-                                "Net Income": None,
-                                "EPS (Basic)": None,
-                                "EPS (Diluted)": None,
-                                "Shares Outstanding": None
-                            }
-                            
-                            # Map Yahoo Finance keys to our row labels
-                            key_mapping = {
-                                "CostOfRevenue": "Cost of Revenue",
-                                "GrossProfit": "Gross Profit",
-                                "ResearchDevelopment": "Research & Development",
-                                "SellingGeneralAdministrative": "Selling, General & Admin",
-                                "TotalOperatingExpenses": "Operating Expenses",
-                                "OperatingIncome": "Operating Income",
-                                "InterestExpense": "Interest Expense",
-                                "TotalOtherIncomeExpenseNet": "Other Income/Expense",
-                                "IncomeBeforeTax": "Income Before Tax",
-                                "IncomeTaxExpense": "Income Tax Expense",
-                                "NetIncome": "Net Income",
-                                "BasicEPS": "EPS (Basic)",
-                                "DilutedEPS": "EPS (Diluted)",
-                                "WeightedAverageShsOut": "Shares Outstanding",
-                                "WeightedAverageShsOutDil": "Shares Outstanding"
-                            }
-                            
-                            # Get real values where available
-                            for yf_key, row_name in key_mapping.items():
-                                if yf_key in raw_income_statement.index:
-                                    value = float(raw_income_statement.loc[yf_key].tolist()[i]) / divisor
-                                    
-                                    # Special case for EPS values which should be in currency not millions/crores
-                                    if row_name.startswith("EPS"):
-                                        value = value * divisor  # Convert back to original
-                                        
-                                    items[row_name] = value
-                            
-                            # Fill in missing values with reasonable estimates based on real data
-                            if items["Cost of Revenue"] is None and items["Gross Profit"] is not None:
-                                items["Cost of Revenue"] = items["Revenue"] - items["Gross Profit"]
-                            elif items["Cost of Revenue"] is None:
-                                items["Cost of Revenue"] = -revenue * 0.65  # 65% of revenue
-                                
-                            if items["Gross Profit"] is None and items["Cost of Revenue"] is not None:
-                                items["Gross Profit"] = items["Revenue"] + items["Cost of Revenue"]
-                            elif items["Gross Profit"] is None:
-                                items["Gross Profit"] = revenue * 0.35  # 35% of revenue
-                                
-                            if items["Operating Income"] is None and items["Operating Expenses"] is not None and items["Gross Profit"] is not None:
-                                items["Operating Income"] = items["Gross Profit"] + items["Operating Expenses"]
-                            elif items["Operating Income"] is None:
-                                items["Operating Income"] = items["Gross Profit"] * 0.4  # 40% of gross profit
-                                
-                            if items["Income Before Tax"] is None and items["Operating Income"] is not None:
-                                items["Income Before Tax"] = items["Operating Income"] * 0.92  # Accounting for interest, etc.
-                                
-                            if items["Income Tax Expense"] is None and items["Income Before Tax"] is not None:
-                                items["Income Tax Expense"] = -items["Income Before Tax"] * 0.25  # 25% tax rate
-                                
-                            if items["Net Income"] is None and items["Income Before Tax"] is not None and items["Income Tax Expense"] is not None:
-                                items["Net Income"] = items["Income Before Tax"] + items["Income Tax Expense"]
-                            
-                            # Add values to the data dictionary in the correct order
-                            for label in row_labels:
-                                value = items[label]
-                                
-                                # Special display for EPS numbers - showing actual decimals
-                                if label.startswith("EPS"):
-                                    is_data[year].append(f"{value:.2f}" if value is not None else "N/A")
-                                elif label == "Shares Outstanding":
-                                    is_data[year].append(f"{int(value):,}" if value is not None else "N/A")
-                                else:
-                                    is_data[year].append(int(value) if value is not None else "N/A")
-            
-            # If we don't have sufficient data, use sample data that scales with company size
-            if not is_data:
-                # Look at company market cap to scale appropriately
-                ticker = yf.Ticker(stock_symbol)
-                info = ticker.info
-                
-                # Base scale on market cap if available, otherwise use a default
-                scale = 5000
-                if 'marketCap' in info and info['marketCap'] is not None:
-                    scale = max(info['marketCap'] / 2000000, 1000)  # Minimum scale of 1000
-                
-                # Create sample data scaled to company size
-                for i, year in enumerate(year_labels):
-                    # Apply a growth pattern over the years
-                    year_scale = scale * (1.1 ** (num_years - i - 1))  # Newer years have higher values
-                    
-                    # Revenue (base value for calculations)
-                    revenue = year_scale
-                    
-                    # Calculate other items based on revenue
-                    cost_of_revenue = -revenue * 0.65  # Typically 60-70% of revenue
-                    gross_profit = revenue + cost_of_revenue
-                    rd_expense = -gross_profit * 0.15  # R&D is about 10-20% of gross profit
-                    sga_expense = -gross_profit * 0.35  # SG&A is about 30-40% of gross profit
-                    operating_expenses = rd_expense + sga_expense
-                    operating_income = gross_profit + operating_expenses
-                    interest_expense = -operating_income * 0.05  # Interest expense is small % of operating income
-                    other_income = operating_income * 0.02  # Other income/expense varies
-                    income_before_tax = operating_income + interest_expense + other_income
-                    income_tax = -income_before_tax * 0.25  # Tax rate about 25%
-                    net_income = income_before_tax + income_tax
-                    
-                    # EPS calculations (these are per share, not in millions/crores)
-                    shares_outstanding = 1000 * (1 + (i * 0.02))  # Growing slightly each year
-                    eps_basic = net_income / shares_outstanding
-                    eps_diluted = eps_basic * 0.95  # Diluted slightly lower than basic
-                    
-                    # Add data for this year
-                    is_data[year] = []
-                    is_data[year].append(int(revenue))
-                    is_data[year].append(int(cost_of_revenue))
-                    is_data[year].append(int(gross_profit))
-                    is_data[year].append(int(rd_expense))
-                    is_data[year].append(int(sga_expense))
-                    is_data[year].append(int(operating_expenses))
-                    is_data[year].append(int(operating_income))
-                    is_data[year].append(int(interest_expense))
-                    is_data[year].append(int(other_income))
-                    is_data[year].append(int(income_before_tax))
-                    is_data[year].append(int(income_tax))
-                    is_data[year].append(int(net_income))
-                    is_data[year].append(f"{eps_basic:.2f}")
-                    is_data[year].append(f"{eps_diluted:.2f}")
-                    is_data[year].append(f"{int(shares_outstanding):,}")
-            
-            # Create DataFrame from the data
-            df = pd.DataFrame(is_data, index=row_labels)
-            
-            # Format numbers with commas for display (except for EPS which is already formatted)
-            for col in df.columns:
-                for idx in df.index:
-                    if not idx.startswith("EPS") and idx != "Shares Outstanding":
-                        value = df.loc[idx, col]
-                        if isinstance(value, (int, float)) and not isinstance(value, str):
-                            df.loc[idx, col] = f"{value:,}"
-            
-            # Create HTML for the income statement table with styling to match the balance sheet
-            st.markdown("""
-            <style>
-            .dataframe {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: Arial, sans-serif;
-            }
-            .dataframe th, .dataframe td {
-                text-align: right;
-                padding: 8px;
-                border: 1px solid #ddd;
-            }
-            .dataframe th {
-                background-color: #f5f5f5;
-            }
-            .dataframe tr:nth-child(3), .dataframe tr:nth-child(7), .dataframe tr:nth-child(12) {
-                font-weight: bold;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            # Display the income statement table
-            st.write(df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-            
-        except Exception as e:
-            st.error(f"Error displaying income statement: {str(e)}")
-            
-            # Display raw income statement data as fallback
-            if not raw_income_statement.empty:
-                st.write("Showing raw income statement data:")
-                # Format values for display
-                for col in raw_income_statement.columns:
-                    raw_income_statement[col] = raw_income_statement[col].apply(
-                        lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
-                    )
-                st.dataframe(raw_income_statement, use_container_width=True)
+            # Set period based on selection
+            if timeframe == "1 Month":
+                period = "1mo"
+            elif timeframe == "3 Months":
+                period = "3mo"
+            elif timeframe == "6 Months":
+                period = "6mo"
+            elif timeframe == "YTD":
+                period = "ytd"
+            elif timeframe == "1 Year":
+                period = "1y"
+            elif timeframe == "3 Years":
+                period = "3y"
+            elif timeframe == "5 Years":
+                period = "5y"
             else:
-                st.write("Income statement data not available for this stock.")
-    
-    with statement_tabs[1]:
-        st.subheader("Balance Sheet")
-        
-        # Display subtitle for Balance Sheet
-        if is_indian:
-            st.write("Consolidated Figures in Rs. Crores / View Standalone")
-        else:
-            st.write("Consolidated Figures in $ Millions / View Standalone")
-        
-        # Create a simple demo balance sheet that matches the screenshot format but with real data
-        # We'll then fill it with data from Yahoo Finance
-        raw_balance_sheet = utils.get_balance_sheet(stock_symbol)
-        
-        # Define our row labels exactly as in the screenshot
-        row_labels = [
-            "Equity Capital", 
-            "Reserves", 
-            "Borrowings", 
-            "Other Liabilities",
-            "Total Liabilities",
-            "Fixed Assets",
-            "CWIP",  # Capital Work in Progress
-            "Investments",
-            "Other Assets",
-            "Total Assets"
-        ]
-        
-        # Create column headers for 10 years (from current year back)
-        current_year = pd.Timestamp.now().year
-        year_labels = [f'Mar {y}' for y in range(current_year, current_year-10, -1)]
-        
-        # Create a demonstration balance sheet with real assets data
-        # We'll extract real data when available and use sensible defaults/calculations when not
-        try:
-            # Create balance sheet data dictionary
-            bs_data = {}
+                period = "max"
             
-            # Calculate total assets from raw data if available
-            if not raw_balance_sheet.empty:
-                # Get total assets
-                if 'TotalAssets' in raw_balance_sheet.index:
-                    total_assets = raw_balance_sheet.loc['TotalAssets'].to_list()
-                    # Limit to 4 years max
-                    total_assets = total_assets[:4]
-                    
-                    # Calculate other components as percentages of total assets based on typical ratios
-                    for i, year in enumerate(year_labels[:len(total_assets)]):
-                        if i < len(total_assets):
-                            asset_value = float(total_assets[i])
-                            
-                            # Convert to appropriate unit
-                            if is_indian:
-                                # Convert to crores (1 crore = 10 million) for Indian stocks
-                                divisor = 10000000
-                            else:
-                                # Convert to millions for non-Indian stocks
-                                divisor = 1000000
-                                
-                            asset_value = asset_value / divisor
-                            
-                            # Create balance sheet entries based on typical ratios
-                            bs_data[year] = []
-                            bs_data[year].append(int(asset_value * 0.05))  # Equity Capital (5%)
-                            bs_data[year].append(int(asset_value * 0.35))  # Reserves (35%)
-                            bs_data[year].append(int(asset_value * 0.30))  # Borrowings (30%)
-                            bs_data[year].append(int(asset_value * 0.30))  # Other Liabilities (30%)
-                            bs_data[year].append(int(asset_value))         # Total Liabilities (100%)
-                            bs_data[year].append(int(asset_value * 0.45))  # Fixed Assets (45%)
-                            bs_data[year].append(int(asset_value * 0.20))  # CWIP (20%)
-                            bs_data[year].append(int(asset_value * 0.10))  # Investments (10%)
-                            bs_data[year].append(int(asset_value * 0.25))  # Other Assets (25%)
-                            bs_data[year].append(int(asset_value))         # Total Assets (100%)
+            # Get stock data for the selected period
+            chart_data = utils.get_stock_data(stock_symbol, period=period)
             
-            # If we don't have data yet, use sample data that scales with company size
-            if not bs_data:
-                # Look at company market cap to scale appropriately
-                ticker = yf.Ticker(stock_symbol)
-                info = ticker.info
+            # Chart type selection
+            chart_type = st.radio(
+                "Select Chart Type:",
+                ["Line", "Candlestick", "OHLC"],
+                horizontal=True
+            )
+            
+            # Create the chart based on selection
+            if chart_type == "Line":
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=chart_data.index,
+                    y=chart_data['Close'],
+                    mode='lines',
+                    name='Close Price',
+                    line=dict(color='royalblue', width=2)
+                ))
                 
-                # Base scale on market cap if available, otherwise use a default
-                scale = 10000
-                if 'marketCap' in info and info['marketCap'] is not None:
-                    scale = max(info['marketCap'] / 1000000, 1000)  # Minimum scale of 1000
+                # Add a title and axis labels
+                fig.update_layout(
+                    title=f"{company_info.get('shortName', stock_symbol)} - {timeframe} Price Chart",
+                    xaxis_title="Date",
+                    yaxis_title="Price" + (" (₹)" if is_indian else " ($)"),
+                    height=500,
+                    template="plotly_white"
+                )
                 
-                # Fill in sample data that's scaled to company size
-                for year in year_labels:
-                    year_scale = scale * (0.9 ** year_labels.index(year))  # Decrease by 10% each year back
+            elif chart_type == "Candlestick":
+                fig = go.Figure(data=[go.Candlestick(
+                    x=chart_data.index,
+                    open=chart_data['Open'],
+                    high=chart_data['High'],
+                    low=chart_data['Low'],
+                    close=chart_data['Close'],
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                
+                # Add a title and axis labels
+                fig.update_layout(
+                    title=f"{company_info.get('shortName', stock_symbol)} - {timeframe} Candlestick Chart",
+                    xaxis_title="Date",
+                    yaxis_title="Price" + (" (₹)" if is_indian else " ($)"),
+                    height=500,
+                    template="plotly_white"
+                )
+                
+            else:  # OHLC
+                fig = go.Figure(data=[go.Ohlc(
+                    x=chart_data.index,
+                    open=chart_data['Open'],
+                    high=chart_data['High'],
+                    low=chart_data['Low'],
+                    close=chart_data['Close'],
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                
+                # Add a title and axis labels
+                fig.update_layout(
+                    title=f"{company_info.get('shortName', stock_symbol)} - {timeframe} OHLC Chart",
+                    xaxis_title="Date",
+                    yaxis_title="Price" + (" (₹)" if is_indian else " ($)"),
+                    height=500,
+                    template="plotly_white"
+                )
+            
+            # Display the chart
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Add volume chart
+            st.subheader("Volume Chart")
+            
+            # Create volume figure
+            volume_fig = go.Figure()
+            volume_fig.add_trace(go.Bar(
+                x=chart_data.index,
+                y=chart_data['Volume'],
+                marker=dict(color='rgba(58, 71, 80, 0.6)'),
+                name='Volume'
+            ))
+            
+            # Update layout
+            volume_fig.update_layout(
+                title=f"{company_info.get('shortName', stock_symbol)} - {timeframe} Volume Chart",
+                xaxis_title="Date",
+                yaxis_title="Volume",
+                height=300,
+                template="plotly_white"
+            )
+            
+            # Display the volume chart
+            st.plotly_chart(volume_fig, use_container_width=True)
+        
+        # FINANCIALS TAB
+        with financials_tab:
+            # Create subtabs for different financial statements
+            statement_tabs = st.tabs(["Valuation Metrics", "Balance Sheet", "Cash Flow", "Profit & Loss"])
+            
+            with statement_tabs[0]:
+                st.subheader("Valuation Metrics")
+                
+                # Create 3 columns for displaying valuation metrics
+                val_col1, val_col2, val_col3 = st.columns(3)
+                
+                with val_col1:
+                    # Price-based ratios
+                    st.markdown("**Price Ratios**")
+                    # P/E Ratio (Trailing)
+                    pe_ratio = metrics.get('valuation_metrics', {}).get('trailingPE')
+                    if pe_ratio:
+                        st.metric("P/E Ratio (TTM)", format_utils.format_number(pe_ratio))
+                    else:
+                        st.metric("P/E Ratio (TTM)", "N/A")
                     
-                    bs_data[year] = []
-                    bs_data[year].append(int(year_scale * 0.05))  # Equity Capital (5%)
-                    bs_data[year].append(int(year_scale * 0.35))  # Reserves (35%)
-                    bs_data[year].append(int(year_scale * 0.30))  # Borrowings (30%)
-                    bs_data[year].append(int(year_scale * 0.30))  # Other Liabilities (30%)
-                    bs_data[year].append(int(year_scale))         # Total Liabilities (100%)
-                    bs_data[year].append(int(year_scale * 0.45))  # Fixed Assets (45%)
-                    bs_data[year].append(int(year_scale * 0.20))  # CWIP (20%)
-                    bs_data[year].append(int(year_scale * 0.10))  # Investments (10%)
-                    bs_data[year].append(int(year_scale * 0.25))  # Other Assets (25%)
-                    bs_data[year].append(int(year_scale))         # Total Assets (100%)
+                    # P/E Ratio (Forward)
+                    forward_pe = metrics.get('valuation_metrics', {}).get('forwardPE')
+                    if forward_pe:
+                        st.metric("P/E Ratio (Forward)", format_utils.format_number(forward_pe))
+                    else:
+                        st.metric("P/E Ratio (Forward)", "N/A")
+                    
+                    # Price to Book
+                    pb_ratio = metrics.get('valuation_metrics', {}).get('priceToBook')
+                    if pb_ratio:
+                        st.metric("Price to Book", format_utils.format_number(pb_ratio))
+                    else:
+                        st.metric("Price to Book", "N/A")
+                    
+                    # Price to Sales
+                    ps_ratio = metrics.get('valuation_metrics', {}).get('priceToSalesTrailing12Months')
+                    if ps_ratio:
+                        st.metric("Price to Sales (TTM)", format_utils.format_number(ps_ratio))
+                    else:
+                        st.metric("Price to Sales (TTM)", "N/A")
+                    
+                    # PEG Ratio
+                    peg_ratio = metrics.get('valuation_metrics', {}).get('pegRatio')
+                    if peg_ratio:
+                        st.metric("PEG Ratio", format_utils.format_number(peg_ratio))
+                    else:
+                        st.metric("PEG Ratio", "N/A")
+                
+                with val_col2:
+                    # Profitability ratios
+                    st.markdown("**Profitability**")
+                    
+                    # Profit Margin
+                    profit_margin = metrics.get('key_ratios', {}).get('profitMargins')
+                    if profit_margin:
+                        st.metric("Profit Margin", format_utils.format_percent(profit_margin))
+                    else:
+                        st.metric("Profit Margin", "N/A")
+                    
+                    # Operating Margin
+                    operating_margin = metrics.get('key_ratios', {}).get('operatingMargins')
+                    if operating_margin:
+                        st.metric("Operating Margin", format_utils.format_percent(operating_margin))
+                    else:
+                        st.metric("Operating Margin", "N/A")
+                    
+                    # ROE
+                    roe = metrics.get('key_ratios', {}).get('returnOnEquity')
+                    if roe:
+                        st.metric("Return on Equity", format_utils.format_percent(roe))
+                    else:
+                        st.metric("Return on Equity", "N/A")
+                    
+                    # ROA
+                    roa = metrics.get('key_ratios', {}).get('returnOnAssets')
+                    if roa:
+                        st.metric("Return on Assets", format_utils.format_percent(roa))
+                    else:
+                        st.metric("Return on Assets", "N/A")
+                    
+                    # ROCE (if available)
+                    roce = metrics.get('key_ratios', {}).get('returnOnCapitalEmployed')
+                    if roce:
+                        st.metric("Return on Capital Employed", format_utils.format_percent(roce))
+                    else:
+                        st.metric("Return on Capital Employed", "N/A")
+                
+                with val_col3:
+                    # Growth and other metrics
+                    st.markdown("**Growth & Others**")
+                    
+                    # Revenue Growth
+                    revenue_growth = metrics.get('performance_metrics', {}).get('revenueGrowth')
+                    if revenue_growth:
+                        st.metric("Revenue Growth (YoY)", format_utils.format_percent(revenue_growth))
+                    else:
+                        st.metric("Revenue Growth (YoY)", "N/A")
+                    
+                    # Earnings Growth
+                    earnings_growth = metrics.get('performance_metrics', {}).get('earningsGrowth')
+                    if earnings_growth:
+                        st.metric("Earnings Growth (YoY)", format_utils.format_percent(earnings_growth))
+                    else:
+                        st.metric("Earnings Growth (YoY)", "N/A")
+                    
+                    # Current Ratio
+                    current_ratio = metrics.get('key_ratios', {}).get('currentRatio')
+                    if current_ratio:
+                        st.metric("Current Ratio", format_utils.format_number(current_ratio))
+                    else:
+                        st.metric("Current Ratio", "N/A")
+                    
+                    # Debt to Equity
+                    debt_to_equity = metrics.get('key_ratios', {}).get('debtToEquity')
+                    if debt_to_equity:
+                        st.metric("Debt to Equity", format_utils.format_number(debt_to_equity))
+                    else:
+                        st.metric("Debt to Equity", "N/A")
+                    
+                    # Dividend Yield
+                    dividend_yield = metrics.get('key_ratios', {}).get('dividendYield')
+                    if dividend_yield:
+                        st.metric("Dividend Yield", format_utils.format_percent(dividend_yield))
+                    else:
+                        st.metric("Dividend Yield", "N/A")
             
-            # Create DataFrame from the data
-            df = pd.DataFrame(bs_data, index=row_labels)
-            
-            # Format numbers with commas for display
-            for col in df.columns:
-                df[col] = df[col].apply(lambda x: f"{x:,}")
-            
-            # Create HTML for the balance sheet table with styling to match the screenshot
-            st.markdown("""
-            <style>
-            .dataframe {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: Arial, sans-serif;
-            }
-            .dataframe th, .dataframe td {
-                text-align: right;
-                padding: 8px;
-                border: 1px solid #ddd;
-            }
-            .dataframe th {
-                background-color: #f5f5f5;
-            }
-            .dataframe tr:nth-child(5), .dataframe tr:nth-child(10) {
-                font-weight: bold;
-                background-color: #f9f9f9;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            # Display the table
-            st.write(df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-            
-        except Exception as e:
-            st.error(f"Error displaying balance sheet: {str(e)}")
-            st.write("Showing raw balance sheet data:")
-            
-            # Show raw balance sheet as fallback
-            if not raw_balance_sheet.empty:
-                # Format values for display
-                for col in raw_balance_sheet.columns:
-                    raw_balance_sheet[col] = raw_balance_sheet[col].apply(
-                        lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
-                    )
-                st.dataframe(raw_balance_sheet, use_container_width=True)
-            else:
-                st.write("No balance sheet data available for this stock.")
-    
-    with statement_tabs[2]:
-        st.subheader("Cash Flows")
-        
-        # Display subtitle for Cash Flow Statement
-        if is_indian:
-            st.write("Consolidated Figures in Rs. Crores")
-        else:
-            st.write("Consolidated Figures in $ Millions")
-        
-        # Define a function to display cash flow statement
-        def display_cash_flow(stock_symbol, is_indian=False):
-            try:
-                # First try to get data from Screener.in for Indian stocks
-                screener_data_available = False
+            with statement_tabs[1]:
+                st.subheader("Balance Sheet")
+                
+                # Display subtitle for Balance Sheet
                 if is_indian:
-                    with st.spinner("Fetching cash flow data from Screener.in..."):
-                        # Get Cash Flow data from Screener
-                        cf_df = screener_data.get_cash_flow(stock_symbol)
+                    st.write("Consolidated Figures in Rs. Crores / View Standalone")
+                else:
+                    st.write("Consolidated Figures in $ Millions / View Standalone")
+                
+                # Create a simple demo balance sheet that matches the screenshot format but with real data
+                # We'll then fill it with data from Yahoo Finance
+                raw_balance_sheet = utils.get_balance_sheet(stock_symbol)
+                
+                # Define our row labels exactly as in the screenshot
+                row_labels = [
+                    "Equity Capital", 
+                    "Reserves", 
+                    "Borrowings", 
+                    "Other Liabilities",
+                    "Total Liabilities",
+                    "Fixed Assets",
+                    "CWIP",  # Capital Work in Progress
+                    "Investments",
+                    "Other Assets",
+                    "Total Assets"
+                ]
+                
+                # Create column headers for 10 years (from current year back)
+                current_year = pd.Timestamp.now().year
+                year_labels = [f'Mar {y}' for y in range(current_year, current_year-10, -1)]
+                
+                # Create the balance sheet DataFrame
+                balance_sheet_df = pd.DataFrame(index=row_labels)
+                
+                # Add year columns with default N/A values
+                for year in year_labels:
+                    balance_sheet_df[year] = "N/A"
+                
+                # Fill with actual data if available
+                if not raw_balance_sheet.empty:
+                    if is_indian:
+                        st.info("Using data from Yahoo Finance (formatted for Indian market)")
+                    else:
+                        st.info("Using data from Yahoo Finance")
                         
-                        # Check if we got data
-                        if not cf_df.empty:
-                            # Success message
-                            st.success("Using Screener.in cash flow data")
+                    # Map Yahoo Finance balance sheet items to our template
+                    bs_mapping = {
+                        "Common Stock": "Equity Capital",
+                        "Retained Earnings": "Reserves",
+                        "Long Term Debt": "Borrowings",
+                        "Total Current Liabilities": "Other Liabilities",
+                        "Total Liabilities Net Minority Interest": "Total Liabilities",
+                        "Net PPE": "Fixed Assets",
+                        "Construction In Progress": "CWIP",
+                        "Investments": "Investments",
+                        "Other Assets": "Other Assets",
+                        "Total Assets": "Total Assets"
+                    }
+                    
+                    # Convert column labels if they are timestamps
+                    if isinstance(raw_balance_sheet.columns[0], pd.Timestamp):
+                        formatted_columns = {}
+                        for col in raw_balance_sheet.columns:
+                            # Map to 'Mar YYYY' format
+                            year_label = f"Mar {col.year}"
+                            # Only use those within our target years
+                            if year_label in year_labels:
+                                formatted_columns[col] = year_label
+                        
+                        # Process each item in the raw balance sheet
+                        for bs_item, our_label in bs_mapping.items():
+                            if bs_item in raw_balance_sheet.index:
+                                for orig_col, year_label in formatted_columns.items():
+                                    value = raw_balance_sheet.loc[bs_item, orig_col]
+                                    
+                                    # Skip NaN values
+                                    if pd.isna(value):
+                                        continue
+                                    
+                                    # Convert to appropriate unit (Millions for USD, Crores for INR)
+                                    divisor = 10000000 if is_indian else 1000000  # 1 crore = 10 million
+                                    value = value / divisor
+                                    
+                                    # Format with commas and store in our DataFrame
+                                    balance_sheet_df.loc[our_label, year_label] = f"{int(value):,}"
+                
+                # Display the balance sheet
+                st.write(balance_sheet_df, use_container_width=True)
+        
+            with statement_tabs[2]:
+                st.subheader("Cash Flow")
+                
+                # Display subtitle for Cash Flow
+                if is_indian:
+                    st.write("Consolidated Figures in Rs. Crores / View Standalone")
+                else:
+                    st.write("Consolidated Figures in $ Millions / View Standalone")
+                    
+                # Create a function to display cash flow statement
+                def display_cash_flow(stock_symbol, is_indian=False):
+                    try:
+                        # First try to get data from Screener.in for Indian stocks
+                        screener_data_available = False
+                        if is_indian:
+                            with st.spinner("Fetching cash flow data from Screener.in..."):
+                                # Fetch data from Screener.in
+                                data = screener_integration.fetch_data(stock_symbol)
+                                
+                                if data:
+                                    # Format the cash flow data
+                                    formatted_cf = screener_integration.format_cash_flow(data, is_indian=True)
+                                    
+                                    if not formatted_cf.empty:
+                                        # Success message
+                                        st.success("Using Screener.in cash flow data")
+                                        
+                                        # Define key rows we want to highlight
+                                        important_rows = [
+                                            "Cash from Operating Activity",
+                                            "Cash from Investing Activity",
+                                            "Cash from Financing Activity",
+                                            "Net Cash Flow"
+                                        ]
+                                        
+                                        # Create HTML for the cash flow table with styling
+                                        st.markdown("""
+                                        <style>
+                                        .dataframe {
+                                            width: 100%;
+                                            border-collapse: collapse;
+                                            font-family: Arial, sans-serif;
+                                        }
+                                        .dataframe th, .dataframe td {
+                                            text-align: right;
+                                            padding: 8px;
+                                            border: 1px solid #ddd;
+                                        }
+                                        .dataframe th {
+                                            background-color: #f5f5f5;
+                                        }
+                                        .total-row {
+                                            font-weight: bold;
+                                            background-color: #f9f9f9;
+                                        }
+                                        </style>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        # Create HTML table with custom styling for important rows
+                                        html_table = formatted_cf.to_html(classes='dataframe', escape=False)
+                                        
+                                        # Add special styling for important rows
+                                        for row in important_rows:
+                                            if row in formatted_cf.index:
+                                                html_table = html_table.replace(f'<tr>\n      <th>{row}</th>', 
+                                                                              f'<tr class="total-row">\n      <th>{row}</th>')
+                                        
+                                        # Display the table
+                                        st.write(html_table, unsafe_allow_html=True)
+                                        screener_data_available = True
+                                        return
+                        
+                        # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
+                        if not screener_data_available:
+                            # Get data from Yahoo Finance
+                            ticker = yf.Ticker(stock_symbol)
+                            cash_flow = ticker.cashflow
                             
-                            # Format numbers with commas for better readability
-                            display_cf = cf_df.copy()
+                            if cash_flow is not None and not cash_flow.empty:
+                                st.info("Using Yahoo Finance cash flow data")
+                                
+                                # Define row labels matching the professional format
+                                row_labels = [
+                                    "Cash from Operating Activity",
+                                    "Profit from operations",
+                                    "Working capital changes",
+                                    "Direct taxes",
+                                    "Cash from Investing Activity",
+                                    "Fixed assets",
+                                    "Investments", 
+                                    "Cash from Financing Activity",
+                                    "Borrowings",
+                                    "Dividend",
+                                    "Net Cash Flow"
+                                ]
+                                
+                                # Create DataFrame with our standard format
+                                formatted_cf = pd.DataFrame(index=row_labels)
+                                
+                                # Process columns
+                                for col in cash_flow.columns:
+                                    col_name = col
+                                    if isinstance(col, pd.Timestamp):
+                                        col_name = col.strftime('%b %Y')
+                                    
+                                    formatted_cf[col_name] = None
+                                    
+                                    # Map values from Yahoo Finance to our standard format
+                                    if 'Total Cash From Operating Activities' in cash_flow.index:
+                                        value = cash_flow.loc['Total Cash From Operating Activities', col]
+                                        if pd.notna(value):
+                                            # Convert to crores/millions
+                                            value = value / (10000000 if is_indian else 1000000)
+                                            formatted_cf.loc['Cash from Operating Activity', col_name] = value
+                                            
+                                    if 'Total Cashflows From Investing Activities' in cash_flow.index:
+                                        value = cash_flow.loc['Total Cashflows From Investing Activities', col]
+                                        if pd.notna(value):
+                                            # Convert to crores/millions
+                                            value = value / (10000000 if is_indian else 1000000)
+                                            formatted_cf.loc['Cash from Investing Activity', col_name] = value
+                                            
+                                    if 'Total Cash From Financing Activities' in cash_flow.index:
+                                        value = cash_flow.loc['Total Cash From Financing Activities', col]
+                                        if pd.notna(value):
+                                            # Convert to crores/millions
+                                            value = value / (10000000 if is_indian else 1000000)
+                                            formatted_cf.loc['Cash from Financing Activity', col_name] = value
+                                            
+                                    # Calculate Net Cash Flow if we have all components
+                                    if (pd.notna(formatted_cf.loc['Cash from Operating Activity', col_name]) and
+                                        pd.notna(formatted_cf.loc['Cash from Investing Activity', col_name]) and
+                                        pd.notna(formatted_cf.loc['Cash from Financing Activity', col_name])):
+                                        
+                                        net_value = (formatted_cf.loc['Cash from Operating Activity', col_name] +
+                                                    formatted_cf.loc['Cash from Investing Activity', col_name] +
+                                                    formatted_cf.loc['Cash from Financing Activity', col_name])
+                                        
+                                        formatted_cf.loc['Net Cash Flow', col_name] = net_value
+                                
+                                # Format values for display
+                                display_cf = formatted_cf.copy()
+                                for col in display_cf.columns:
+                                    for idx in display_cf.index:
+                                        value = display_cf.loc[idx, col]
+                                        
+                                        if pd.isna(value) or value is None:
+                                            display_cf.loc[idx, col] = "N/A"
+                                        else:
+                                            # Format financial values with commas
+                                            try:
+                                                display_cf.loc[idx, col] = f"{int(round(value)):,}"
+                                            except:
+                                                display_cf.loc[idx, col] = "N/A"
+                                
+                                # Create HTML for the cash flow table with styling
+                                st.markdown("""
+                                <style>
+                                .dataframe {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    font-family: Arial, sans-serif;
+                                }
+                                .dataframe th, .dataframe td {
+                                    text-align: right;
+                                    padding: 8px;
+                                    border: 1px solid #ddd;
+                                }
+                                .dataframe th {
+                                    background-color: #f5f5f5;
+                                }
+                                .total-row {
+                                    font-weight: bold;
+                                    background-color: #f9f9f9;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                
+                                # Create HTML table with custom styling for important rows
+                                html_table = display_cf.to_html(classes='dataframe', escape=False)
+                                
+                                # Add special styling for important rows
+                                important_rows = [
+                                    "Cash from Operating Activity",
+                                    "Cash from Investing Activity",
+                                    "Cash from Financing Activity",
+                                    "Net Cash Flow"
+                                ]
+                                
+                                for row in important_rows:
+                                    if row in display_cf.index:
+                                        html_table = html_table.replace(f'<tr>\n      <th>{row}</th>', 
+                                                                      f'<tr class="total-row">\n      <th>{row}</th>')
+                                
+                                # Display the table
+                                st.write(html_table, unsafe_allow_html=True)
+                            else:
+                                st.warning("Cash flow data not available for this stock.")
+                    except Exception as e:
+                        st.error(f"Error displaying cash flow: {str(e)}")
+                        
+                        # Fallback to raw data
+                        try:
+                            ticker = yf.Ticker(stock_symbol)
+                            raw_cf = ticker.cashflow
                             
-                            for col in display_cf.columns:
-                                display_cf[col] = display_cf[col].apply(
-                                    lambda x: f"{int(x):,}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
-                                )
+                            if raw_cf is not None and not raw_cf.empty:
+                                st.write("Showing raw cash flow data:")
+                                # Format column names if timestamps
+                                if isinstance(raw_cf.columns[0], pd.Timestamp):
+                                    raw_cf.columns = [col.strftime('%b %Y') for col in raw_cf.columns]
+                                st.dataframe(raw_cf, use_container_width=True)
+                            else:
+                                st.write("Cash flow data not available for this stock.")
+                        except Exception as fallback_error:
+                            st.error(f"Could not display fallback data: {fallback_error}")
+                            st.write("Cash flow data not available for this stock.")
+                
+                # Call the function to display cash flow
+                display_cash_flow(stock_symbol, is_indian)
+            
+            with statement_tabs[3]:
+                st.subheader("Profit & Loss")
+                
+                # Display subtitle for P&L Statement
+                if is_indian:
+                    st.write("Consolidated Figures in Rs. Crores")
+                else:
+                    st.write("Consolidated Figures in $ Millions")
+                    
+                # Create a function to display the P&L statement
+                def display_pl_statement(stock_symbol, is_indian=False):
+                    try:
+                        # First try to get data from Screener.in for Indian stocks
+                        screener_data_available = False
+                        if is_indian:
+                            with st.spinner("Fetching financial data from Screener.in..."):
+                                # Fetch all financial data from Screener.in
+                                screener_data = screener_integration.fetch_data(stock_symbol)
+                                
+                                if screener_data:
+                                    # Format the P&L data
+                                    formatted_df = screener_integration.format_pl_statement(screener_data, is_indian=True)
+                                    
+                                    if not formatted_df.empty:
+                                        st.success("Using financial data from Screener.in")
+                                        
+                                        # Create HTML for the P&L table with styling
+                                        st.markdown("""
+                                        <style>
+                                        .dataframe {
+                                            width: 100%;
+                                            border-collapse: collapse;
+                                            font-family: Arial, sans-serif;
+                                        }
+                                        .dataframe th, .dataframe td {
+                                            text-align: right;
+                                            padding: 8px;
+                                            border: 1px solid #ddd;
+                                        }
+                                        .dataframe th {
+                                            background-color: #f5f5f5;
+                                        }
+                                        .dataframe tr:nth-child(3), .dataframe tr:nth-child(8), .dataframe tr:nth-child(10) {
+                                            font-weight: bold;
+                                        }
+                                        </style>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        # Display the P&L table with real data
+                                        st.write(formatted_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
+                                        
+                                        # Don't need to use Yahoo Finance
+                                        screener_data_available = True
+                                        return
+                        
+                        # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
+                        if not screener_data_available:
+                            # Get stock data from Yahoo Finance
+                            ticker = yf.Ticker(stock_symbol)
                             
-                            # Define key rows we want to highlight
-                            operating_cf_row = None
-                            investing_cf_row = None
-                            financing_cf_row = None
-                            net_cf_row = None
+                            # For proper P&L table, we need to gather info from different sources
+                            income_data = ticker.income_stmt
                             
-                            # Look for total rows
-                            for idx in display_cf.index:
-                                if "Cash from Operations" in idx or "Operating Activities" in idx:
-                                    operating_cf_row = idx
-                                if "Cash from Investing" in idx or "Investing Activities" in idx:
-                                    investing_cf_row = idx
-                                if "Cash from Financing" in idx or "Financing Activities" in idx:
-                                    financing_cf_row = idx
-                                if "Net Cash Flow" in idx or "Net Increase in Cash" in idx:
-                                    net_cf_row = idx
+                            # If no income statement is available, fallback to financials
+                            if income_data is None or income_data.empty:
+                                income_data = ticker.financials
                             
-                            # Create HTML for the cash flow table with styling
+                            # If still no data, show a message and return
+                            if income_data is None or income_data.empty:
+                                st.warning("No financial data available from Yahoo Finance for this stock.")
+                                return
+                            
+                            st.info("Using Yahoo Finance financial data")
+                            
+                            # Units conversion factor - Millions for USD, Crores for INR
+                            divisor = 10000000 if is_indian else 1000000
+                            
+                            # Format column names to be more readable (e.g., Sep 2024 instead of 2024-09-30)
+                            if isinstance(income_data.columns, pd.DatetimeIndex):
+                                income_data.columns = [col.strftime('%b %Y') for col in income_data.columns]
+                            
+                            # Sort columns to show most recent first
+                            income_data = income_data.sort_index(axis=1, ascending=False)
+                            
+                            # Create our P&L structure with the rows we want to display
+                            pl_rows = [
+                                "Sales",
+                                "Expenses",
+                                "Operating Profit",
+                                "OPM %",
+                                "Other Income",
+                                "Interest",
+                                "Depreciation",
+                                "Profit before tax",
+                                "Tax %",
+                                "Net Profit",
+                                "EPS in Rs",
+                                "Dividend Payout %"
+                            ]
+                            
+                            # Map Yahoo Finance keys to our P&L rows
+                            key_mapping = {
+                                # Standard keys
+                                "Total Revenue": "Sales",
+                                "Operating Revenue": "Sales",
+                                "Cost Of Revenue": "Expenses",
+                                "Total Expenses": "Expenses",
+                                "Operating Income": "Operating Profit",
+                                "EBIT": "Operating Profit",
+                                "Gross Profit": "Operating Profit",
+                                "Other Income Expense": "Other Income",
+                                "Other Non Operating Income Expenses": "Other Income",
+                                "Interest Expense": "Interest",
+                                "Interest Expense Non Operating": "Interest",
+                                "Reconciled Depreciation": "Depreciation",
+                                "Depreciation And Amortization": "Depreciation",
+                                "Pretax Income": "Profit before tax",
+                                "Income Before Tax": "Profit before tax",
+                                "Tax Provision": "Tax %",
+                                "Income Tax Expense": "Tax %",
+                                "Net Income": "Net Profit",
+                                "Net Income Common Stockholders": "Net Profit",
+                                "Basic EPS": "EPS in Rs",
+                                "Diluted EPS": "EPS in Rs"
+                            }
+                            
+                            # Create a DataFrame to display our formatted P&L statement
+                            formatted_df = pd.DataFrame(index=pl_rows)
+                            
+                            # Process each year column
+                            for col in income_data.columns:
+                                # Create an empty column 
+                                formatted_df[col] = None
+                                
+                                # Map values from income statement to our P&L rows
+                                for source_key, target_row in key_mapping.items():
+                                    if source_key in income_data.index:
+                                        # Get the value
+                                        value = income_data.loc[source_key, col]
+                                        
+                                        # Skip if it's NaN
+                                        if pd.isna(value):
+                                            continue
+                                            
+                                        # Convert to millions/crores
+                                        if target_row != "EPS in Rs" and target_row != "OPM %" and target_row != "Tax %" and target_row != "Dividend Payout %":
+                                            value = value / divisor
+                                        
+                                        # Store in our result DataFrame
+                                        formatted_df.loc[target_row, col] = value
+                                
+                                # Calculate any missing values
+                                
+                                # If we have Sales but no Operating Profit, calculate it
+                                if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is None:
+                                    if formatted_df.loc["Expenses", col] is not None:
+                                        formatted_df.loc["Operating Profit", col] = formatted_df.loc["Sales", col] - formatted_df.loc["Expenses", col]
+                                
+                                # If we have Sales and Operating Profit but no Expenses, calculate it
+                                if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is not None:
+                                    if formatted_df.loc["Expenses", col] is None:
+                                        formatted_df.loc["Expenses", col] = formatted_df.loc["Sales", col] - formatted_df.loc["Operating Profit", col]
+                                
+                                # Calculate OPM % if we have both Sales and Operating Profit
+                                if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is not None:
+                                    if formatted_df.loc["Sales", col] != 0:
+                                        formatted_df.loc["OPM %", col] = (formatted_df.loc["Operating Profit", col] / formatted_df.loc["Sales", col]) * 100
+                                
+                                # Calculate Tax % if we have both Tax and Profit before tax
+                                if formatted_df.loc["Tax %", col] is not None and formatted_df.loc["Profit before tax", col] is not None:
+                                    if isinstance(formatted_df.loc["Tax %", col], (int, float)) and isinstance(formatted_df.loc["Profit before tax", col], (int, float)):
+                                        if formatted_df.loc["Profit before tax", col] != 0:
+                                            # Calculate actual tax percentage
+                                            formatted_df.loc["Tax %", col] = abs(formatted_df.loc["Tax %", col] / formatted_df.loc["Profit before tax", col] * 100)
+                            
+                            # Format values for display
+                            display_df = formatted_df.copy()
+                            for col in display_df.columns:
+                                for idx in display_df.index:
+                                    value = display_df.loc[idx, col]
+                                    
+                                    # Format based on what type of value it is
+                                    if pd.isna(value) or value is None:
+                                        display_df.loc[idx, col] = "N/A"
+                                    elif idx in ["OPM %", "Tax %", "Dividend Payout %"]:
+                                        # Format percentages
+                                        try:
+                                            display_df.loc[idx, col] = f"{int(round(value))}%"
+                                        except:
+                                            display_df.loc[idx, col] = "N/A"
+                                    elif idx == "EPS in Rs":
+                                        # Format EPS with 2 decimal places
+                                        try:
+                                            display_df.loc[idx, col] = f"{value:.2f}"
+                                        except:
+                                            display_df.loc[idx, col] = "N/A"
+                                    else:
+                                        # Format financial values with commas
+                                        try:
+                                            display_df.loc[idx, col] = f"{int(round(value)):,}"
+                                        except:
+                                            display_df.loc[idx, col] = "N/A"
+                        
+                            # Create HTML for the P&L table with styling
                             st.markdown("""
                             <style>
                             .dataframe {
@@ -911,791 +1016,362 @@ with main_tabs[2]:
                             .dataframe th {
                                 background-color: #f5f5f5;
                             }
-                            .total-row {
+                            .dataframe tr:nth-child(3), .dataframe tr:nth-child(8), .dataframe tr:nth-child(10) {
                                 font-weight: bold;
-                                background-color: #f9f9f9;
                             }
                             </style>
                             """, unsafe_allow_html=True)
                             
-                            # Create HTML table with custom styling for important rows
-                            html_table = display_cf.to_html(classes='dataframe', escape=False)
+                            # Display the P&L table with real data
+                            st.write(display_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
                             
-                            # Add special styling for important rows if found
-                            if operating_cf_row:
-                                html_table = html_table.replace(f'<tr>\n      <th>{operating_cf_row}</th>', 
-                                                              f'<tr class="total-row">\n      <th>{operating_cf_row}</th>')
-                            if investing_cf_row:
-                                html_table = html_table.replace(f'<tr>\n      <th>{investing_cf_row}</th>', 
-                                                              f'<tr class="total-row">\n      <th>{investing_cf_row}</th>')
-                            if financing_cf_row:
-                                html_table = html_table.replace(f'<tr>\n      <th>{financing_cf_row}</th>', 
-                                                              f'<tr class="total-row">\n      <th>{financing_cf_row}</th>')
-                            if net_cf_row:
-                                html_table = html_table.replace(f'<tr>\n      <th>{net_cf_row}</th>', 
-                                                              f'<tr class="total-row">\n      <th>{net_cf_row}</th>')
-                            
-                            # Display the table
-                            st.write(html_table, unsafe_allow_html=True)
-                            screener_data_available = True
-                            return
-                
-                # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
-                if not is_indian or not screener_data_available:
-                    # Get raw cash flow data from Yahoo Finance
-                    raw_cash_flow = utils.get_cash_flow(stock_symbol)
-                    
-                    if not raw_cash_flow.empty:
-                        st.info("Using Yahoo Finance cash flow data")
+                    except Exception as e:
+                        st.error(f"Error displaying P&L statement: {str(e)}")
                         
-                        # Define row labels matching the professional format
-                        row_labels = [
-                            "Cash from Operating Activity",
-                            "Profit from operations",
-                            "Receivables",
-                            "Inventory",
-                            "Payables",
-                            "Working capital changes",
-                            "Direct taxes",
-                            "Cash from Investing Activity",
-                            "Cash from Financing Activity",
-                            "Net Cash Flow"
-                        ]
-        
-        # Create years for columns - use up to 12 years like in the screenshot
-        current_year = pd.Timestamp.now().year
-        num_years = 12
-        year_labels = [f'Mar {y}' for y in range(current_year, current_year-num_years, -1)]
-        
-        try:
-            # Create cash flow data dictionary
-            cf_data = {}
-            
-            # Extract relevant cash flow data from Yahoo Finance if available
-            if not raw_cash_flow.empty:
-                # Get operating cash flow as our baseline
-                operating_cash_flow_key = None
-                for key in ['OperatingCashFlow', 'TotalCashFromOperatingActivities', 'CashFlowFromOperations']:
-                    if key in raw_cash_flow.index:
-                        operating_cash_flow_key = key
-                        break
-                
-                if operating_cash_flow_key:
-                    # Extract values and limit to the number of years we want to display
-                    operating_cash_flow = raw_cash_flow.loc[operating_cash_flow_key].tolist()
-                    operating_cash_flow = operating_cash_flow[:num_years]
-                    
-                    # Fill data for each year
-                    for i, year in enumerate(year_labels[:len(operating_cash_flow)]):
-                        if i < len(operating_cash_flow):
-                            base_value = float(operating_cash_flow[i])
+                        try:
+                            # Fallback to displaying raw income statement
+                            ticker = yf.Ticker(stock_symbol)
+                            raw_income = ticker.financials
                             
-                            # Convert to appropriate unit
-                            if is_indian:
-                                # Convert to crores (1 crore = 10 million) for Indian stocks
-                                divisor = 10000000
+                            if raw_income is not None and not raw_income.empty:
+                                st.write("Showing raw financial data from Yahoo Finance:")
+                                for col in raw_income.columns:
+                                    raw_income[col] = raw_income[col].apply(
+                                        lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
+                                    )
+                                st.dataframe(raw_income, use_container_width=True)
                             else:
-                                # Convert to millions for non-Indian stocks
-                                divisor = 1000000
-                                
-                            base_value = base_value / divisor
-                            
-                            # Look for other key components in the raw data
-                            profit_from_ops = base_value * 0.8  # 80% of operating cash flow by default
-                            
-                            # Try to get real values for investing & financing cash flows
-                            investing_cf = None
-                            for key in ['InvestingCashFlow', 'CashFlowFromInvestment', 'NetCashUsedForInvestingActivites']:
-                                if key in raw_cash_flow.index:
-                                    investing_cf = float(raw_cash_flow.loc[key].tolist()[i]) / divisor
-                                    break
-                            
-                            financing_cf = None
-                            for key in ['FinancingCashFlow', 'CashFlowFromFinancing', 'NetCashUsedProvidedByFinancingActivities']:
-                                if key in raw_cash_flow.index:
-                                    financing_cf = float(raw_cash_flow.loc[key].tolist()[i]) / divisor
-                                    break
-                            
-                            # If we couldn't find investing/financing, estimate them
-                            if investing_cf is None:
-                                investing_cf = -base_value * 0.7  # Typically negative (investment outflow)
-                            if financing_cf is None:
-                                financing_cf = -base_value * 0.1  # Can be positive or negative
-                                
-                            # Calculate net cash flow
-                            net_cash_flow = base_value + investing_cf + financing_cf
-                            
-                            # Create cash flow entries with realistic values
-                            cf_data[year] = []
-                            cf_data[year].append(int(base_value))                    # Cash from Operating Activity
-                            cf_data[year].append(int(profit_from_ops))               # Profit from operations
-                            cf_data[year].append(int(base_value * 0.1 * ((-1) ** i)))  # Receivables (alternating sign)
-                            cf_data[year].append(int(base_value * 0.05 * ((-1) ** (i+1))))  # Inventory (alternating sign)
-                            cf_data[year].append(int(base_value * 0.15 * ((-1) ** i)))  # Payables (alternating sign)
-                            cf_data[year].append(int(base_value * 0.2 * ((-1) ** (i+1))))  # Working capital changes
-                            cf_data[year].append(int(-base_value * 0.05))            # Direct taxes (negative)
-                            cf_data[year].append(int(investing_cf))                  # Cash from Investing Activity
-                            cf_data[year].append(int(financing_cf))                  # Cash from Financing Activity
-                            cf_data[year].append(int(net_cash_flow))                 # Net Cash Flow
-            
-            # If we don't have sufficient data, use sample data that scales with company size
-            if not cf_data:
-                # Look at company market cap to scale appropriately
-                ticker = yf.Ticker(stock_symbol)
-                info = ticker.info
+                                st.warning("No financial data available for this stock.")
+                        except:
+                            st.warning("No financial data available for this stock.")
                 
-                # Base scale on market cap if available, otherwise use a default
-                scale = 5000
-                if 'marketCap' in info and info['marketCap'] is not None:
-                    scale = max(info['marketCap'] / 2000000, 1000)  # Minimum scale of 1000
-                
-                # Create sample data scaled to company size
-                for i, year in enumerate(year_labels):
-                    # Apply a growth pattern over the years
-                    year_scale = scale * (1.1 ** (num_years - i - 1))  # Newer years have higher values
-                    
-                    # Operating cash flow (base value for calculations)
-                    operating_cf = year_scale
-                    
-                    # Create realistic cash flow values with proper relationships
-                    profit_from_ops = operating_cf * 0.85
-                    receivables = operating_cf * 0.1 * ((-1) ** i)  # Alternating sign for receivables
-                    inventory = operating_cf * 0.05 * ((-1) ** (i+1))  # Alternating sign for inventory
-                    payables = operating_cf * 0.15 * ((-1) ** i)  # Alternating sign for payables
-                    working_capital = operating_cf * 0.12 * ((-1) ** (i+1))  # Alternating sign
-                    direct_taxes = -operating_cf * 0.05  # Usually negative (outflow)
-                    
-                    # Investing activity is typically negative (investments = cash outflow)
-                    investing_cf = -operating_cf * 0.7 * (0.9 + (0.2 * random.random()))  # Some variation
-                    
-                    # Financing can be positive or negative
-                    financing_cf = operating_cf * 0.1 * (1.5 - (3 * random.random()))  # More variation
-                    
-                    # Calculate net cash flow
-                    net_cash_flow = operating_cf + investing_cf + financing_cf
-                    
-                    # Add data for this year
-                    cf_data[year] = []
-                    cf_data[year].append(int(operating_cf))
-                    cf_data[year].append(int(profit_from_ops))
-                    cf_data[year].append(int(receivables))
-                    cf_data[year].append(int(inventory))
-                    cf_data[year].append(int(payables))
-                    cf_data[year].append(int(working_capital))
-                    cf_data[year].append(int(direct_taxes))
-                    cf_data[year].append(int(investing_cf))
-                    cf_data[year].append(int(financing_cf))
-                    cf_data[year].append(int(net_cash_flow))
+                # Display the P&L statement
+                display_pl_statement(stock_symbol, is_indian)
+        
+        # NEWS TAB
+        with news_tab:
+            st.subheader("Latest News")
             
-            # Create DataFrame from the data
-            df = pd.DataFrame(cf_data, index=row_labels)
+            # Get news
+            news_items = stock_news.get_news(stock_symbol)
             
-            # Format numbers with commas for display
-            for col in df.columns:
-                df[col] = df[col].apply(lambda x: f"{x:,}")
-            
-            # Create HTML for the cash flow table with styling to match the screenshot
-            st.markdown("""
-            <style>
-            .dataframe {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: Arial, sans-serif;
-            }
-            .dataframe th, .dataframe td {
-                text-align: right;
-                padding: 8px;
-                border: 1px solid #ddd;
-            }
-            .dataframe th {
-                background-color: #f5f5f5;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            # Display the cash flow table
-            st.write(df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-            
-        except Exception as e:
-            st.error(f"Error displaying cash flow statement: {str(e)}")
-            
-            # Display raw cash flow data as fallback
-            if not raw_cash_flow.empty:
-                st.write("Showing raw cash flow data:")
-                # Format values for display
-                for col in raw_cash_flow.columns:
-                    raw_cash_flow[col] = raw_cash_flow[col].apply(
-                        lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
-                    )
-                st.dataframe(raw_cash_flow, use_container_width=True)
+            if not news_items:
+                st.warning("No recent news available for this stock.")
             else:
-                st.write("Cash flow data not available for this stock.")
-                
-    with statement_tabs[3]:
-        st.subheader("Profit & Loss")
-        
-        # Display subtitle for P&L Statement
-        if is_indian:
-            st.write("Consolidated Figures in Rs. Crores")
-        else:
-            st.write("Consolidated Figures in $ Millions")
+                # Display news as expandable cards
+                for i, news in enumerate(news_items):
+                    with st.expander(f"{news['title']} ({news['published_date']})"):
+                        if 'summary' in news and news['summary']:
+                            st.write(news['summary'])
+                        else:
+                            st.write(news['text'] if 'text' in news else "No summary available.")
+                        
+                        st.write(f"Source: {news['source']}")
+                        
+                        if 'url' in news and news['url']:
+                            st.write(f"[Read full article]({news['url']})")
             
-        # Create a simple function to display P&L data
-        def display_pl_statement(stock_symbol, is_indian=False):
-            try:
-                # First try to get data from Screener.in for Indian stocks
-                screener_data_available = False
-                if is_indian:
-                    with st.spinner("Fetching financial data from Screener.in..."):
-                        # Get P&L data from Screener
-                        pl_df = screener_data.get_profit_and_loss(stock_symbol)
-                        
-                        # Check if we got data
-                        if not pl_df.empty:
-                            # Format the data for display
-                            st.success("Using Screener.in financial data")
-                            formatted_df = screener_data.format_pl_statement(pl_df, is_indian=True)
-                            screener_data_available = True
+            # Sentiment Analysis
+            st.subheader("Market Sentiment Analysis")
+            
+            # Get sentiment data (this will use OpenAI for natural language processing)
+            sentiment_data = stock_news.analyze_news_sentiment(stock_symbol)
+            
+            # Display sentiment score
+            if sentiment_data and 'overall_score' in sentiment_data:
+                # Get the score
+                score = sentiment_data['overall_score']
                 
-                # If Screener data is not available or it's a non-Indian stock, use Yahoo Finance
-                if not is_indian or not screener_data_available:
-                    # Get stock data from Yahoo Finance
-                    ticker = yf.Ticker(stock_symbol)
-                    
-                    # For proper P&L table, we need to gather info from different sources
-                    income_data = ticker.income_stmt
-                    info = ticker.info  # Company general info
-                    
-                    # If no income statement is available, fallback to financials
-                    if income_data is None or income_data.empty:
-                        income_data = ticker.financials
-                    
-                    # If still no data, show a message and return
-                    if income_data is None or income_data.empty:
-                        st.warning("No financial data available from Yahoo Finance for this stock.")
-                        return
-                    
-                    # Units conversion factor - Millions for USD, Crores for INR
-                    divisor = 10000000 if is_indian else 1000000
-                    currency = "₹" if is_indian else "$"
-                    
-                    # Format column names to be more readable (e.g., Sep 2024 instead of 2024-09-30)
-                    if isinstance(income_data.columns, pd.DatetimeIndex):
-                        income_data.columns = [col.strftime('%b %Y') for col in income_data.columns]
-                    
-                    # Sort columns to show most recent first
-                    income_data = income_data.sort_index(axis=1, ascending=False)
-                    
-                    # Create our P&L structure with the rows we want to display
-                    pl_rows = [
-                        "Sales",
-                        "Expenses",
-                        "Operating Profit",
-                        "OPM %",
-                        "Other Income",
-                        "Interest",
-                        "Depreciation",
-                        "Profit before tax",
-                        "Tax %",
-                        "Net Profit",
-                        "EPS in Rs",
-                        "Dividend Payout %"
-                    ]
-                    
-                    # Map Yahoo Finance keys to our P&L rows
-                    key_mapping = {
-                        # Standard keys
-                        "Total Revenue": "Sales",
-                        "Operating Revenue": "Sales",
-                        "Cost Of Revenue": "Expenses",
-                        "Total Expenses": "Expenses",
-                        "Operating Income": "Operating Profit",
-                        "EBIT": "Operating Profit",
-                        "Gross Profit": "Operating Profit",
-                        "Other Income Expense": "Other Income",
-                        "Other Non Operating Income Expenses": "Other Income",
-                        "Interest Expense": "Interest",
-                        "Interest Expense Non Operating": "Interest",
-                        "Reconciled Depreciation": "Depreciation",
-                        "Depreciation And Amortization": "Depreciation",
-                        "Pretax Income": "Profit before tax",
-                        "Income Before Tax": "Profit before tax",
-                        "Tax Provision": "Tax %",
-                        "Income Tax Expense": "Tax %",
-                        "Net Income": "Net Profit",
-                        "Net Income Common Stockholders": "Net Profit",
-                        "Basic EPS": "EPS in Rs",
-                        "Diluted EPS": "EPS in Rs"
-                    }
-                    
-                    # Create a DataFrame to display our formatted P&L statement
-                    formatted_df = pd.DataFrame(index=pl_rows)
-                    
-                    # Process each year column
-                    for col in income_data.columns:
-                        # Create an empty column 
-                        formatted_df[col] = None
-                        
-                        # Map values from income statement to our P&L rows
-                        for source_key, target_row in key_mapping.items():
-                            if source_key in income_data.index:
-                                # Get the value
-                                value = income_data.loc[source_key, col]
-                                
-                                # Skip if it's NaN
-                                if pd.isna(value):
-                                    continue
-                                    
-                                # Convert to millions/crores
-                                if target_row != "EPS in Rs" and target_row != "OPM %" and target_row != "Tax %" and target_row != "Dividend Payout %":
-                                    value = value / divisor
-                                
-                                # Store in our result DataFrame
-                                formatted_df.loc[target_row, col] = value
-                        
-                        # Calculate any missing values
-                        
-                        # If we have Sales but no Operating Profit, calculate it
-                        if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is None:
-                            if formatted_df.loc["Expenses", col] is not None:
-                                formatted_df.loc["Operating Profit", col] = formatted_df.loc["Sales", col] - formatted_df.loc["Expenses", col]
-                        
-                        # If we have Sales and Operating Profit but no Expenses, calculate it
-                        if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is not None:
-                            if formatted_df.loc["Expenses", col] is None:
-                                formatted_df.loc["Expenses", col] = formatted_df.loc["Sales", col] - formatted_df.loc["Operating Profit", col]
-                        
-                        # Calculate OPM % if we have both Sales and Operating Profit
-                        if formatted_df.loc["Sales", col] is not None and formatted_df.loc["Operating Profit", col] is not None:
-                            if formatted_df.loc["Sales", col] != 0:
-                                formatted_df.loc["OPM %", col] = (formatted_df.loc["Operating Profit", col] / formatted_df.loc["Sales", col]) * 100
-                        
-                        # Calculate Tax % if we have both Tax and Profit before tax
-                        if formatted_df.loc["Tax %", col] is not None and formatted_df.loc["Profit before tax", col] is not None:
-                            if isinstance(formatted_df.loc["Tax %", col], (int, float)) and isinstance(formatted_df.loc["Profit before tax", col], (int, float)):
-                                if formatted_df.loc["Profit before tax", col] != 0:
-                                    # Calculate actual tax percentage
-                                    formatted_df.loc["Tax %", col] = abs(formatted_df.loc["Tax %", col] / formatted_df.loc["Profit before tax", col] * 100)
-                    
-                    # Format values for display
-                    display_df = formatted_df.copy()
-                    for col in display_df.columns:
-                        for idx in display_df.index:
-                            value = display_df.loc[idx, col]
-                            
-                            # Format based on what type of value it is
-                            if pd.isna(value) or value is None:
-                                display_df.loc[idx, col] = "N/A"
-                            elif idx in ["OPM %", "Tax %", "Dividend Payout %"]:
-                                # Format percentages
-                                try:
-                                    display_df.loc[idx, col] = f"{int(round(value))}%"
-                                except:
-                                    display_df.loc[idx, col] = "N/A"
-                            elif idx == "EPS in Rs":
-                                # Format EPS with 2 decimal places
-                                try:
-                                    display_df.loc[idx, col] = f"{value:.2f}"
-                                except:
-                                    display_df.loc[idx, col] = "N/A"
-                            else:
-                                # Format financial values with commas
-                                try:
-                                    display_df.loc[idx, col] = f"{int(round(value)):,}"
-                                except:
-                                    display_df.loc[idx, col] = "N/A"
-                                    
-                    # If Yahoo Finance data, note the source
-                    if not is_indian or not screener_data_available:
-                        st.info("Using Yahoo Finance financial data")
+                # Determine color
+                if score >= 0.7:
+                    color = "green"
+                    label = "Bullish"
+                elif score >= 0.5:
+                    color = "lightgreen"
+                    label = "Slightly Bullish"
+                elif score >= 0.4:
+                    color = "gray"
+                    label = "Neutral"
+                elif score >= 0.2:
+                    color = "orange"
+                    label = "Slightly Bearish"
+                else:
+                    color = "red"
+                    label = "Bearish"
                 
-                # Create HTML for the P&L table with styling
-                st.markdown("""
-                <style>
-                .dataframe {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-family: Arial, sans-serif;
-                }
-                .dataframe th, .dataframe td {
-                    text-align: right;
-                    padding: 8px;
-                    border: 1px solid #ddd;
-                }
-                .dataframe th {
-                    background-color: #f5f5f5;
-                }
-                .dataframe tr:nth-child(3), .dataframe tr:nth-child(8), .dataframe tr:nth-child(10) {
-                    font-weight: bold;
-                }
-                </style>
+                # Create custom progress bar
+                st.markdown(f"""
+                <div style="width:100%; background-color:#f0f0f0; height:30px; border-radius:5px; margin-bottom:10px;">
+                    <div style="width:{score*100}%; background-color:{color}; height:30px; border-radius:5px; text-align:center; line-height:30px; color:white;">
+                        {score*100:.1f}%
+                    </div>
+                </div>
+                <p style="text-align:center; font-weight:bold; color:{color};">{label}</p>
                 """, unsafe_allow_html=True)
                 
-                # Display the P&L table with real data
-                st.write(display_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-                    
-            except Exception as e:
-                st.error(f"Error displaying P&L statement: {str(e)}")
+                # Display top positive and negative factors
+                if 'positive_factors' in sentiment_data and sentiment_data['positive_factors']:
+                    st.subheader("Positive Factors")
+                    for factor in sentiment_data['positive_factors']:
+                        st.markdown(f"- {factor}")
                 
-                try:
-                    # Fallback to displaying raw income statement
-                    ticker = yf.Ticker(stock_symbol)
-                    raw_income = ticker.financials
+                if 'negative_factors' in sentiment_data and sentiment_data['negative_factors']:
+                    st.subheader("Negative Factors")
+                    for factor in sentiment_data['negative_factors']:
+                        st.markdown(f"- {factor}")
+            else:
+                st.warning("Sentiment analysis not available for this stock.")
+        
+        # PEER COMPARISON TAB
+        with peer_comparison_tab:
+            st.subheader("Peer Comparison")
+            
+            # Get sector information
+            sector = company_info.get('sector', None)
+            
+            if not sector:
+                st.warning("Sector information not available for this stock. Cannot perform peer comparison.")
+            else:
+                # Get peer symbols
+                peer_symbols = utils.get_peer_symbols(stock_symbol, sector, is_indian)
+                
+                if not peer_symbols:
+                    st.warning("No peer stocks found for comparison.")
+                else:
+                    # Allow user to select which peers to compare
+                    selected_peers = st.multiselect(
+                        "Select peers for comparison:",
+                        peer_symbols,
+                        default=peer_symbols[:4]  # Default to first 4 peers
+                    )
                     
-                    if raw_income is not None and not raw_income.empty:
-                        st.write("Showing raw financial data from Yahoo Finance:")
-                        for col in raw_income.columns:
-                            raw_income[col] = raw_income[col].apply(
-                                lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) and pd.notnull(x) else "N/A"
+                    if selected_peers:
+                        # Add the main stock to the comparison
+                        comparison_symbols = [stock_symbol] + selected_peers
+                        
+                        # Get comparison data
+                        comparison_data = peer_comparison.get_peer_data(stock_symbol, selected_peers, is_indian)
+                        
+                        if comparison_data is not None and not comparison_data.empty:
+                            # Plot key metrics comparison
+                            st.subheader("Key Financial Metrics Comparison")
+                            
+                            # Select metrics to compare
+                            metrics_to_compare = st.multiselect(
+                                "Select metrics to compare:",
+                                [
+                                    "P/E Ratio", "Price to Book", "Price to Sales", "ROE",
+                                    "Operating Margin", "Net Margin", "Debt to Equity",
+                                    "Dividend Yield", "Market Cap", "Beta"
+                                ],
+                                default=["P/E Ratio", "Price to Book", "ROE", "Dividend Yield"]
                             )
-                        st.dataframe(raw_income, use_container_width=True)
-                    else:
-                        st.warning("No financial data available for this stock.")
-                except:
-                    st.warning("No financial data available for this stock.")
-        
-        # Display the P&L statement
-        display_pl_statement(stock_symbol, is_indian)
-
-# News & Sentiment Tab
-with main_tabs[3]:
-    # Create subtabs for Sentiment Analysis and News
-    sentiment_tabs = st.tabs(["🧠 Mood Tracker", "📰 Latest News"])
+                            
+                            if metrics_to_compare:
+                                # Create subplots for each metric
+                                fig = make_subplots(
+                                    rows=len(metrics_to_compare),
+                                    cols=1,
+                                    subplot_titles=metrics_to_compare,
+                                    vertical_spacing=0.1
+                                )
+                                
+                                # Add data for each metric
+                                for i, metric in enumerate(metrics_to_compare):
+                                    metric_col = metric.replace(" ", "_").lower()
+                                    
+                                    # Check if the metric is in the comparison data
+                                    if metric_col in comparison_data.columns:
+                                        # Sort the data for better visualization
+                                        sorted_data = comparison_data.sort_values(by=metric_col)
+                                        
+                                        # Highlight the main stock
+                                        colors = ['royalblue'] * len(sorted_data)
+                                        for j, symbol in enumerate(sorted_data['Symbol']):
+                                            if symbol == stock_symbol:
+                                                colors[j] = 'orange'
+                                        
+                                        # Add horizontal bar chart
+                                        fig.add_trace(
+                                            go.Bar(
+                                                y=sorted_data['Company'],
+                                                x=sorted_data[metric_col],
+                                                orientation='h',
+                                                marker_color=colors,
+                                                text=sorted_data[metric_col].apply(
+                                                    lambda x: f"{x:.2f}"
+                                                ),
+                                                textposition='auto',
+                                                name=metric
+                                            ),
+                                            row=i+1,
+                                            col=1
+                                        )
+                                        
+                                        # Update layout for this subplot
+                                        fig.update_yaxes(title_text="", row=i+1, col=1)
+                                        fig.update_xaxes(title_text=metric, row=i+1, col=1)
+                                
+                                # Update overall layout
+                                fig.update_layout(
+                                    height=250 * len(metrics_to_compare),
+                                    showlegend=False,
+                                    template="plotly_white"
+                                )
+                                
+                                # Display the comparison chart
+                                st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Display comparative price performance
+                            st.subheader("Price Performance Comparison")
+                            
+                            # Time period selection
+                            time_period = st.radio(
+                                "Select time period:",
+                                ["1 Month", "3 Months", "6 Months", "1 Year", "YTD"],
+                                horizontal=True
+                            )
+                            
+                            # Map selection to period
+                            period_map = {
+                                "1 Month": "1mo",
+                                "3 Months": "3mo",
+                                "6 Months": "6mo",
+                                "1 Year": "1y",
+                                "YTD": "ytd"
+                            }
+                            period = period_map.get(time_period, "1mo")
+                            
+                            # Create normalized price chart
+                            fig = go.Figure()
+                            
+                            # First date for normalization baseline
+                            baseline_date = None
+                            
+                            # Add each stock to the chart
+                            for symbol in comparison_symbols:
+                                # Get historical data
+                                hist_data = utils.get_stock_data(symbol, period=period)
+                                
+                                if not hist_data.empty:
+                                    # Set baseline date if not set
+                                    if baseline_date is None:
+                                        baseline_date = hist_data.index[0]
+                                    
+                                    # Calculate relative performance (normalized to 100)
+                                    baseline_price = hist_data.loc[baseline_date, 'Close']
+                                    normalized_prices = (hist_data['Close'] / baseline_price) * 100
+                                    
+                                    # Highlight main stock with thicker line
+                                    if symbol == stock_symbol:
+                                        line_width = 3
+                                        line_color = 'orange'
+                                    else:
+                                        line_width = 1.5
+                                        line_color = None  # Use default color cycle
+                                    
+                                    # Get company name for the legend
+                                    company_name = utils.get_company_name(symbol)
+                                    if not company_name:
+                                        company_name = symbol
+                                    
+                                    # Add line to chart
+                                    fig.add_trace(go.Scatter(
+                                        x=hist_data.index,
+                                        y=normalized_prices,
+                                        mode='lines',
+                                        name=company_name,
+                                        line=dict(width=line_width, color=line_color)
+                                    ))
+                            
+                            # Update layout
+                            fig.update_layout(
+                                title=f"Relative Price Performance (Base = 100)",
+                                xaxis_title="Date",
+                                yaxis_title="Normalized Price",
+                                height=500,
+                                template="plotly_white",
+                                hovermode="x unified"
+                            )
+                            
+                            # Add baseline reference
+                            fig.add_shape(
+                                type="line",
+                                x0=baseline_date,
+                                y0=100,
+                                x1=hist_data.index[-1],
+                                y1=100,
+                                line=dict(color="gray", width=1, dash="dash")
+                            )
+                            
+                            # Display the chart
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Display comparative metrics in a table
+                            st.subheader("Comparative Financial Metrics")
+                            
+                            # Format the comparison data for display
+                            display_cols = ['Company']
+                            rename_map = {
+                                'pe_ratio': 'P/E Ratio',
+                                'price_to_book': 'P/B Ratio',
+                                'price_to_sales': 'P/S Ratio',
+                                'roe': 'ROE %',
+                                'operating_margin': 'Op. Margin %',
+                                'net_margin': 'Net Margin %',
+                                'debt_to_equity': 'D/E Ratio',
+                                'dividend_yield': 'Div. Yield %',
+                                'market_cap': 'Market Cap',
+                                'beta': 'Beta'
+                            }
+                            
+                            display_metrics = []
+                            for col in comparison_data.columns:
+                                if col in rename_map:
+                                    display_metrics.append(col)
+                                    
+                            # Add the metrics columns to display columns
+                            display_cols.extend(display_metrics)
+                            
+                            # Create a copy for display
+                            display_df = comparison_data[display_cols].copy()
+                            
+                            # Rename columns to more readable names
+                            display_df = display_df.rename(columns=rename_map)
+                            
+                            # Format the values
+                            for col in display_df.columns:
+                                if col != 'Company':
+                                    # Market Cap needs special formatting
+                                    if col == 'Market Cap':
+                                        display_df[col] = display_df[col].apply(
+                                            lambda x: format_utils.format_large_number(x, is_indian=is_indian)
+                                        )
+                                    # Percentage metrics
+                                    elif any(pct in col for pct in ['ROE', 'Margin', 'Yield']):
+                                        display_df[col] = display_df[col].apply(
+                                            lambda x: format_utils.format_percent(x)
+                                        )
+                                    # Other numeric metrics with 2 decimal places
+                                    else:
+                                        display_df[col] = display_df[col].apply(
+                                            lambda x: format_utils.format_number(x, decimal_places=2)
+                                        )
+                            
+                            # Highlight the main stock
+                            def highlight_main_stock(row):
+                                if row['Company'] == utils.get_company_name(stock_symbol):
+                                    return ['background-color: #ffedcc'] * len(row)
+                                return [''] * len(row)
+                            
+                            # Apply highlighting
+                            styled_df = display_df.style.apply(highlight_main_stock, axis=1)
+                            
+                            # Display the table
+                            st.dataframe(styled_df, use_container_width=True)
+                        else:
+                            st.warning("Could not fetch comparison data for the selected peers.")
     
-    # Mood Tracker subtab
-    with sentiment_tabs[0]:
-        st.header("Emoji Mood Tracker")
-        
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, rgba(25, 57, 138, 0.05), rgba(78, 205, 196, 0.1));
-                  border-radius: 15px; 
-                  padding: 20px; 
-                  margin-bottom: 20px;
-                  border: 1px solid rgba(78, 205, 196, 0.2);">
-            <h3 style="margin-top:0; color:#19398A; font-weight:600; margin-bottom:15px;">
-                <span style="font-size: 1.8rem; margin-right: 10px;">🧠📊</span> 
-                Financial Sentiment Analysis
-            </h3>
-            <p style="color:#19398A; font-size: 0.95rem; margin-bottom: 0;">
-                Visualizing market sentiment through intuitive emoji indicators. This analysis combines price action, 
-                volume patterns, and news sentiment to help you understand the current market mood at a glance.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Get news data for the stock
-        try:
-            news_data = stock_news.get_stock_news(stock_symbol, max_news=5)
-        except:
-            news_data = []
-        
-        # Display the sentiment dashboard with emoji indicators
-        try:
-            sentiment_tracker.display_sentiment_dashboard(stock_symbol, stock_data, news_data)
-        except Exception as e:
-            st.error(f"Error displaying sentiment dashboard: {str(e)}")
-            
-        # Explain the indicators
-        with st.expander("Understanding Sentiment Indicators"):
-            st.markdown("""
-            ### How to Interpret Emoji Indicators
-            
-            Our emoji-based mood tracker translates complex market sentiment into intuitive visual indicators:
-            
-            **Price Sentiment:**
-            - 🚀 **Very Bullish** - Strong upward momentum across timeframes
-            - 😁 **Bullish** - Generally positive price action
-            - 😐 **Neutral** - No clear directional bias
-            - 😟 **Bearish** - Generally negative price action
-            - 🧸 **Very Bearish** - Strong downward momentum across timeframes
-            - 🎢 **Volatile** - High volatility with significant price swings
-            - 🌱 **Recovery** - Potential recovery forming after downtrend
-            
-            **Volume Analysis:**
-            - 📈 **High Interest** - Unusually high trading volume
-            - 👀 **Increased Interest** - Above average trading activity
-            - 📊 **Average Volume** - Normal trading activity
-            - 💤 **Low Interest** - Below average trading volume
-            
-            **News Sentiment:**
-            - 📰😁 **Positive** - Positive news sentiment
-            - 📰🙂 **Slightly Positive** - Mildly positive news tone
-            - 📰😐 **Neutral** - Balanced news coverage
-            - 📰🙁 **Slightly Negative** - Mildly negative news tone
-            - 📰😟 **Negative** - Negative news sentiment
-            
-            **Market Mood Index:**
-            The gauge shows the overall market mood from -100 (extremely bearish) to +100 (extremely bullish),
-            combining price action, volume patterns, and news sentiment into a single comprehensive score.
-            """)
-    
-    # News subtab
-    with sentiment_tabs[1]:
-        # Display stock news
-        stock_news.display_news(stock_symbol)
-
-# Note: Predictions tab removed as requested
-
-# Peer Comparison Tab
-with main_tabs[4]:
-    # Peer comparison section
-    st.header("Peer Comparison")
-    
-    # Display sector information
-    st.subheader(f"Sector: {sector}")
-    st.write(f"Comparing {company_info.get('shortName', stock_symbol)} with similar companies in the {sector} sector.")
-    
-    # Get peer comparison data
-    try:
-        # Get peer comparison data
-        all_symbols = [stock_symbol] + peer_symbols
-        
-        # Initialize an empty DataFrame
-        comparison_data = pd.DataFrame()
-        
-        # Define metrics to fetch
-        metrics = [
-            'shortName', 'currentPrice', 'marketCap', 'trailingPE', 
-            'priceToBook', 'profitMargins', 'returnOnEquity',
-            'dividendYield', 'beta'
-        ]
-        
-        # Fetch data for each symbol
-        for symbol in all_symbols:
-            try:
-                if is_indian and (symbol.endswith('.NS') or symbol.endswith('.BO')):
-                    # Use indian_markets module for Indian stocks
-                    info = indian_markets.get_indian_company_info(symbol)
-                else:
-                    # Use yfinance for other stocks
-                    ticker = yf.Ticker(symbol)
-                    info = ticker.info
-                
-                # Extract metrics
-                data = {}
-                data['Symbol'] = symbol
-                data['Company'] = info.get('shortName', symbol)
-                
-                # Market data
-                data['Price'] = info.get('currentPrice', info.get('regularMarketPrice', None))
-                
-                # Market cap (with Indian notation if needed)
-                market_cap = info.get('marketCap', None)
-                if is_indian and market_cap:
-                    data['Market Cap'] = indian_markets.format_inr(market_cap)
-                else:
-                    data['Market Cap'] = utils.format_large_number(market_cap) if market_cap else None
-                
-                # Other metrics
-                data['P/E Ratio'] = info.get('trailingPE', None)
-                data['P/B Ratio'] = info.get('priceToBook', None)
-                data['Profit Margin'] = info.get('profitMargins', None) * 100 if info.get('profitMargins') else None
-                data['ROE'] = info.get('returnOnEquity', None) * 100 if info.get('returnOnEquity') else None
-                data['Dividend Yield'] = info.get('dividendYield', None) * 100 if info.get('dividendYield') else None
-                data['Beta'] = info.get('beta', None)
-                
-                # Append to DataFrame
-                comparison_data = pd.concat([comparison_data, pd.DataFrame([data])], ignore_index=True)
-                
-            except Exception as e:
-                st.warning(f"Error fetching data for {symbol}: {str(e)}")
-        
-        # Format percentages
-        for col in ['Profit Margin', 'ROE', 'Dividend Yield']:
-            if col in comparison_data.columns:
-                comparison_data[col] = comparison_data[col].apply(
-                    lambda x: f"{x:.2f}%" if pd.notnull(x) else None
-                )
-        
-        # Format other numeric columns
-        for col in ['P/E Ratio', 'P/B Ratio', 'Beta']:
-            if col in comparison_data.columns:
-                comparison_data[col] = comparison_data[col].apply(
-                    lambda x: f"{x:.2f}" if pd.notnull(x) else None
-                )
-        
-        # Format price with currency symbol
-        comparison_data['Price'] = comparison_data['Price'].apply(
-            lambda x: f"₹{x:.2f}" if pd.notnull(x) and is_indian else f"${x:.2f}" if pd.notnull(x) else None
-        )
-        
-        # Display peer comparison with styled dataframe
-        if not comparison_data.empty:
-            st.dataframe(
-                comparison_data,
-                column_config={
-                    "Symbol": st.column_config.TextColumn("Symbol", width="medium"),
-                    "Company": st.column_config.TextColumn("Company", width="large"),
-                    "Price": st.column_config.TextColumn("Price", width="medium"),
-                    "Market Cap": st.column_config.TextColumn("Market Cap", width="medium"),
-                    "P/E Ratio": st.column_config.TextColumn("P/E Ratio", width="medium"),
-                    "P/B Ratio": st.column_config.TextColumn("P/B Ratio", width="medium"),
-                    "Profit Margin": st.column_config.TextColumn("Profit Margin", width="medium"),
-                    "ROE": st.column_config.TextColumn("ROE", width="medium"),
-                    "Dividend Yield": st.column_config.TextColumn("Dividend Yield", width="medium"),
-                    "Beta": st.column_config.TextColumn("Beta", width="medium"),
-                },
-                use_container_width=True,
-                hide_index=True,
-            )
-        else:
-            st.warning("Could not fetch peer comparison data.")
     except Exception as e:
-        st.error(f"Error generating peer comparison: {str(e)}")
-
-# SWOT Analysis Tab
-with main_tabs[5]:
-    # SWOT Analysis section
-    st.header("SWOT Analysis")
-    st.write(f"Strategic analysis for {company_info.get('shortName', stock_symbol)}")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**Strengths**")
-        if sector == "Technology":
-            st.write("- Strong R&D capabilities")
-            st.write("- Diverse product portfolio")
-            st.write("- Global market presence")
-        else:
-            st.write("- Established market position")
-            st.write("- Strong financial performance")
-            st.write("- Experienced management team")
-    
-    with col2:
-        st.write("**Weaknesses**")
-        if sector == "Technology":
-            st.write("- High dependency on specific markets")
-            st.write("- Intense competition")
-            st.write("- Product lifecycle challenges")
-        else:
-            st.write("- Market volatility exposure")
-            st.write("- Regulatory challenges")
-            st.write("- Resource constraints")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**Opportunities**")
-        if sector == "Technology":
-            st.write("- Emerging markets expansion")
-            st.write("- New technology adoption")
-            st.write("- Strategic partnerships")
-        else:
-            st.write("- Market expansion potential")
-            st.write("- Innovation opportunities")
-            st.write("- Strategic acquisition targets")
-    
-    with col2:
-        st.write("**Threats**")
-        if sector == "Technology":
-            st.write("- Rapid technological changes")
-            st.write("- Increasing regulatory scrutiny")
-            st.write("- Global economic uncertainties")
-        else:
-            st.write("- Competitive pressures")
-            st.write("- Economic downturn risks")
-            st.write("- Supply chain vulnerabilities")
-
-# Function to get peer comparison data
-def get_peer_comparison_data(main_symbol, peer_symbols, is_indian=False):
-    """
-    Get peer comparison data for visualization
-    
-    Args:
-        main_symbol (str): Main stock symbol to compare against
-        peer_symbols (list): List of peer stock symbols
-        is_indian (bool): Whether they're Indian stocks
-        
-    Returns:
-        pd.DataFrame: DataFrame with peer comparison data
-    """
-    # Include the main symbol
-    all_symbols = [main_symbol] + peer_symbols
-    
-    # Initialize an empty DataFrame
-    comparison_data = pd.DataFrame()
-    
-    # Define metrics to fetch
-    metrics = [
-        'shortName', 'currentPrice', 'marketCap', 'trailingPE', 
-        'priceToBook', 'profitMargins', 'returnOnEquity',
-        'dividendYield', 'beta'
-    ]
-    
-    # Fetch data for each symbol
-    for symbol in all_symbols:
-        try:
-            if is_indian and (symbol.endswith('.NS') or symbol.endswith('.BO')):
-                # Use indian_markets module for Indian stocks
-                info = indian_markets.get_indian_company_info(symbol)
-            else:
-                # Use yfinance for other stocks
-                ticker = yf.Ticker(symbol)
-                info = ticker.info
-            
-            # Extract metrics
-            data = {}
-            data['Symbol'] = symbol
-            data['Company'] = info.get('shortName', symbol)
-            
-            # Market data
-            data['Price'] = info.get('currentPrice', info.get('regularMarketPrice', None))
-            
-            # Market cap (with Indian notation if needed)
-            market_cap = info.get('marketCap', None)
-            if market_cap:
-                if is_indian:
-                    # For Indian stocks, display market cap in Crores with Indian formatting
-                    market_cap_inr = market_cap * 83.0  # Convert to INR
-                    data['Market Cap'] = format_utils.format_indian_numbers(market_cap_inr, in_crores=True)
-                else:
-                    data['Market Cap'] = format_utils.format_large_number(market_cap, is_indian=False)
-            else:
-                data['Market Cap'] = None
-            
-            # Other metrics
-            data['P/E Ratio'] = info.get('trailingPE', None)
-            data['P/B Ratio'] = info.get('priceToBook', None)
-            data['Profit Margin'] = info.get('profitMargins', None) * 100 if info.get('profitMargins') else None
-            data['ROE'] = info.get('returnOnEquity', None) * 100 if info.get('returnOnEquity') else None
-            data['Dividend Yield'] = info.get('dividendYield', None) * 100 if info.get('dividendYield') else None
-            data['Beta'] = info.get('beta', None)
-            
-            # Append to DataFrame
-            comparison_data = comparison_data.append(data, ignore_index=True)
-            
-        except Exception as e:
-            print(f"Error fetching data for {symbol}: {str(e)}")
-    
-    # Format percentages
-    for col in ['Profit Margin', 'ROE', 'Dividend Yield']:
-        if col in comparison_data.columns:
-            comparison_data[col] = comparison_data[col].apply(
-                lambda x: format_utils.format_percent(x) if pd.notnull(x) else None
-            )
-    
-    # Format other numeric columns
-    for col in ['P/E Ratio', 'P/B Ratio', 'Beta']:
-        if col in comparison_data.columns:
-            comparison_data[col] = comparison_data[col].apply(
-                lambda x: format_utils.format_number(x) if pd.notnull(x) else None
-            )
-    
-    # Format price with currency symbol
-    comparison_data['Price'] = comparison_data['Price'].apply(
-        lambda x: format_utils.format_currency(x, is_indian=is_indian) if pd.notnull(x) else None
-    )
-    
-    return comparison_data
-
-# Add a modern footer with futuristic design
-st.markdown("""
-<div style="background: linear-gradient(90deg, rgba(255,107,26,0.03) 0%, rgba(45,48,71,0.03) 100%); 
-            padding: 15px; border-radius: 10px; text-align: center; margin-top: 30px;">
-    <p style="margin:0; color:#71717a; font-size:0.8rem;">
-        MoneyMitra - Real-time financial analytics platform for smart investing decisions
-    </p>
-    <p style="margin:5px 0 0 0; color:#71717a; font-size:0.7rem;">
-        Powered by advanced data analysis and multi-source intelligence
-    </p>
-</div>
-""", unsafe_allow_html=True)
+        st.error(f"An error occurred: {str(e)}")
+        st.info("Please try another stock symbol or check your internet connection.")
