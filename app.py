@@ -1060,16 +1060,21 @@ if stock_symbol:
             else:
                 # Display news as expandable cards
                 for i, news in enumerate(news_items):
-                    with st.expander(f"{news['title']} ({news['published_date']})"):
+                    # Get the date from the correct key (our get_news function uses 'date')
+                    news_date = news.get('date', 'Recent')
+                    
+                    with st.expander(f"{news['title']} ({news_date})"):
                         if 'summary' in news and news['summary']:
                             st.write(news['summary'])
                         else:
-                            st.write(news['text'] if 'text' in news else "No summary available.")
+                            st.write(news.get('text', "No summary available."))
                         
-                        st.write(f"Source: {news['source']}")
+                        # Use publisher instead of source (our get_news function uses 'publisher')
+                        st.write(f"Source: {news.get('publisher', 'Unknown')}")
                         
-                        if 'url' in news and news['url']:
-                            st.write(f"[Read full article]({news['url']})")
+                        # Use link instead of url (our get_news function uses 'link')
+                        if 'link' in news and news['link']:
+                            st.write(f"[Read full article]({news['link']})")
             
             # Sentiment Analysis
             st.subheader("Market Sentiment Analysis")
