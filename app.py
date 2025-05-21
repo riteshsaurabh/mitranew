@@ -1467,7 +1467,7 @@ if stock_symbol:
                                                 fig.add_trace(go.Bar(
                                                     x=comparison_data.index,
                                                     y=ytd_values,
-                                                    marker_color=['#FF6B1A' if x == stock_symbol else ('#16C172' if y >= 0 else '#F05D5E') for x, y in zip(comparison_data.index, ytd_values)]
+                                                    marker_color=['#FF6B1A' if x == stock_symbol else ('#16C172' if y is not None and y >= 0 else '#F05D5E') for x, y in zip(comparison_data.index, ytd_values)]
                                                 ))
                                                 
                                                 fig.update_layout(
@@ -1544,7 +1544,7 @@ if stock_symbol:
                                                 fig.add_trace(go.Bar(
                                                     x=comparison_data.index,
                                                     y=margin_values,
-                                                    marker_color=['#FF6B1A' if x == stock_symbol else ('#16C172' if y >= 0 else '#F05D5E') for x, y in zip(comparison_data.index, margin_values)]
+                                                    marker_color=['#FF6B1A' if x == stock_symbol else ('#16C172' if y is not None and y >= 0 else '#F05D5E') for x, y in zip(comparison_data.index, margin_values)]
                                                 ))
                                                 
                                                 fig.update_layout(
@@ -1575,7 +1575,7 @@ if stock_symbol:
                                                 fig.add_trace(go.Bar(
                                                     x=comparison_data.index,
                                                     y=roe_values,
-                                                    marker_color=['#FF6B1A' if x == stock_symbol else ('#16C172' if y >= 0 else '#F05D5E') for x, y in zip(comparison_data.index, roe_values)]
+                                                    marker_color=['#FF6B1A' if x == stock_symbol else ('#16C172' if y is not None and y >= 0 else '#F05D5E') for x, y in zip(comparison_data.index, roe_values)]
                                                 ))
                                                 
                                                 fig.update_layout(
