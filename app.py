@@ -858,15 +858,27 @@ if stock_symbol:
                         
                         # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
                         if not screener_data_available:
-                            # Get stock data from Yahoo Finance
-                            ticker = yf.Ticker(stock_symbol)
-                            
-                            # For proper P&L table, we need to gather info from different sources
-                            income_data = ticker.income_stmt
-                            
-                            # If no income statement is available, fallback to financials
-                            if income_data is None or income_data.empty:
-                                income_data = ticker.financials
+                            try:
+                                # Get stock data from Yahoo Finance
+                                ticker = yf.Ticker(stock_symbol)
+                                
+                                # For proper P&L table, we need to gather info from different sources
+                                income_data = ticker.income_stmt
+                                
+                                # If no income statement is available, fallback to financials
+                                if income_data is None or income_data.empty:
+                                    income_data = ticker.financials
+                                    
+                                # Additional fallback to quarterly data if annual data is not available
+                                if income_data is None or income_data.empty:
+                                    income_data = ticker.quarterly_income_stmt
+                                    if income_data is None or income_data.empty:
+                                        income_data = ticker.quarterly_financials
+                                        
+                                st.success(f"Successfully retrieved financial data for {stock_symbol}")
+                            except Exception as e:
+                                st.error(f"Error retrieving financial data: {str(e)}")
+                                income_data = None
                             
                             # If still no data, show a message and return
                             if income_data is None or income_data.empty:
