@@ -812,45 +812,49 @@ if stock_symbol:
                         # First try to get data from Screener.in for Indian stocks
                         screener_data_available = False
                         if is_indian:
-                            with st.spinner("Fetching financial data from Screener.in..."):
-                                # Fetch all financial data from Screener.in
-                                screener_data = screener_integration.fetch_data(stock_symbol)
-                                
-                                if screener_data:
-                                    # Format the P&L data
-                                    formatted_df = screener_integration.format_pl_statement(screener_data, is_indian=True)
+                            try:
+                                with st.spinner("Fetching financial data from Screener.in..."):
+                                    # Fetch all financial data from Screener.in
+                                    screener_data = screener_integration.fetch_data(stock_symbol)
                                     
-                                    if not formatted_df.empty:
-                                        st.success("Using financial data from Screener.in")
+                                    if screener_data and isinstance(screener_data, dict):
+                                        # Format the P&L data
+                                        formatted_df = screener_integration.format_pl_statement(screener_data, is_indian=True)
                                         
-                                        # Create HTML for the P&L table with styling
-                                        st.markdown("""
-                                        <style>
-                                        .dataframe {
-                                            width: 100%;
-                                            border-collapse: collapse;
-                                            font-family: Arial, sans-serif;
-                                        }
-                                        .dataframe th, .dataframe td {
-                                            text-align: right;
-                                            padding: 8px;
-                                            border: 1px solid #ddd;
-                                        }
-                                        .dataframe th {
-                                            background-color: #f5f5f5;
-                                        }
-                                        .dataframe tr:nth-child(3), .dataframe tr:nth-child(8), .dataframe tr:nth-child(10) {
-                                            font-weight: bold;
-                                        }
-                                        </style>
-                                        """, unsafe_allow_html=True)
-                                        
-                                        # Display the P&L table with real data
-                                        st.write(formatted_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-                                        
-                                        # Don't need to use Yahoo Finance
-                                        screener_data_available = True
-                                        return
+                                        if not formatted_df.empty:
+                                            st.success("Using financial data from Screener.in")
+                                            screener_data_available = True
+                                            
+                                            # Create HTML for the P&L table with styling
+                                            st.markdown("""
+                                            <style>
+                                            .dataframe {
+                                                width: 100%;
+                                                border-collapse: collapse;
+                                                font-family: Arial, sans-serif;
+                                            }
+                                            .dataframe th, .dataframe td {
+                                                text-align: right;
+                                                padding: 8px;
+                                                border: 1px solid #ddd;
+                                            }
+                                            .dataframe th {
+                                                background-color: #f5f5f5;
+                                            }
+                                            .dataframe tr:nth-child(3), .dataframe tr:nth-child(8), .dataframe tr:nth-child(10) {
+                                                font-weight: bold;
+                                            }
+                                            </style>
+                                            """, unsafe_allow_html=True)
+                                            
+                                            # Display the P&L table with real data
+                                            st.write(formatted_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
+                                            
+                                            # Don't need to use Yahoo Finance
+                                            return
+                            except Exception as e:
+                                st.warning(f"Could not fetch data from Screener.in: {str(e)}")
+                                st.info("Falling back to Yahoo Finance data")
                         
                         # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
                         if not screener_data_available:
