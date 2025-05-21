@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import utils
 import financial_metrics
+import financial_metrics_direct
 import simple_watchlist
 import indian_markets
 import stock_news
