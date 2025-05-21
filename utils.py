@@ -27,6 +27,143 @@ def get_stock_data(ticker, period='1y'):
     
     return hist
 
+def get_peer_symbols(symbol, sector, is_indian=False):
+    """
+    Get peer stock symbols based on sector
+    
+    Args:
+        symbol (str): Current stock symbol
+        sector (str): Stock sector
+        is_indian (bool): Whether it's an Indian stock
+        
+    Returns:
+        list: List of peer stock symbols
+    """
+    # Define peer stocks for different sectors (focusing on Indian markets)
+    peers = {
+        "Technology": ["INFY.NS", "TECHM.NS", "WIPRO.NS", "HCLTECH.NS"],
+        "Financial Services": ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS"],
+        "Consumer Goods": ["HINDUNILVR.NS", "ITC.NS", "DABUR.NS", "MARICO.NS"],
+        "Automotive": ["TATAMOTORS.NS", "MARUTI.NS", "M&M.NS", "HEROMOTOCO.NS"],
+        "Pharmaceuticals": ["SUNPHARMA.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS"],
+        "Energy": ["RELIANCE.NS", "ONGC.NS", "IOC.NS", "BPCL.NS"],
+        "Manufacturing": ["LT.NS", "ADANIENT.NS", "SIEMENS.NS", "ABB.NS"]
+    }
+    
+    # Handle US stocks (simplified example with popular tickers in each sector)
+    us_peers = {
+        "Technology": ["AAPL", "MSFT", "GOOGL", "AMZN", "META"],
+        "Financial Services": ["JPM", "BAC", "WFC", "C", "GS"],
+        "Consumer Goods": ["PG", "KO", "PEP", "MCD", "DIS"],
+        "Healthcare": ["JNJ", "PFE", "MRK", "ABBV", "UNH"],
+        "Energy": ["XOM", "CVX", "COP", "SLB", "EOG"],
+        "Industrial": ["GE", "HON", "MMM", "CAT", "BA"]
+    }
+    
+    # Get peers based on market
+    sector_map = peers if is_indian else us_peers
+    
+    # If sector exists in our mapping
+    if sector in sector_map:
+        # Filter out the current symbol
+        peer_list = [peer for peer in sector_map[sector] if peer != symbol]
+        return peer_list[:4]  # Return top 4 peers
+    else:
+        # Default to technology sector if unknown
+        default_sector = "Technology" if sector_map == us_peers else "Technology"
+        return [peer for peer in sector_map[default_sector] if peer != symbol][:4]
+
+def get_peer_comparison_data(main_symbol, peer_symbols, is_indian=False):
+    """
+    Get peer comparison data for visualization
+    
+    Args:
+        main_symbol (str): Main stock symbol to compare against
+        peer_symbols (list): List of peer stock symbols
+        is_indian (bool): Whether they're Indian stocks
+        
+    Returns:
+        pd.DataFrame: DataFrame with peer comparison data
+    """
+    # Add main symbol to the beginning of the list
+    all_symbols = [main_symbol] + peer_symbols
+    
+    # Initialize comparison data
+    comparison_data = pd.DataFrame(index=all_symbols)
+    
+    # Get data for each symbol
+    for symbol in all_symbols:
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            
+            # Get company name
+            company_name = info.get('shortName', symbol)
+            comparison_data.loc[symbol, 'Company'] = company_name
+            
+            # Get current price
+            price = info.get('currentPrice', info.get('regularMarketPrice', None))
+            comparison_data.loc[symbol, 'Price'] = price
+            
+            # Get P/E ratio
+            pe_ratio = info.get('trailingPE', None)
+            comparison_data.loc[symbol, 'P/E Ratio'] = pe_ratio
+            
+            # Get P/B ratio
+            pb_ratio = info.get('priceToBook', None)
+            comparison_data.loc[symbol, 'P/B Ratio'] = pb_ratio
+            
+            # Get profit margin
+            profit_margin = info.get('profitMargins', None)
+            if profit_margin is not None:
+                comparison_data.loc[symbol, 'Profit Margin'] = profit_margin * 100
+            
+            # Get ROE
+            roe = info.get('returnOnEquity', None)
+            if roe is not None:
+                comparison_data.loc[symbol, 'ROE'] = roe * 100
+            
+            # Get dividend yield
+            div_yield = info.get('dividendYield', None)
+            if div_yield is not None:
+                comparison_data.loc[symbol, 'Dividend Yield'] = div_yield * 100
+            
+            # Get beta
+            beta = info.get('beta', None)
+            comparison_data.loc[symbol, 'Beta'] = beta
+            
+            # Get 1-year return
+            hist_data = ticker.history(period='1y')
+            if not hist_data.empty and len(hist_data) > 1:
+                first_price = hist_data['Close'].iloc[0]
+                last_price = hist_data['Close'].iloc[-1]
+                ytd_return = ((last_price / first_price) - 1) * 100
+                comparison_data.loc[symbol, 'YTD Return'] = ytd_return
+            
+        except Exception as e:
+            print(f"Error fetching data for {symbol}: {str(e)}")
+    
+    # Format percentages
+    for col in ['Profit Margin', 'ROE', 'Dividend Yield']:
+        if col in comparison_data.columns:
+            comparison_data[col] = comparison_data[col].apply(
+                lambda x: f"{x:.2f}%" if pd.notnull(x) else None
+            )
+    
+    # Format other numeric columns
+    for col in ['P/E Ratio', 'P/B Ratio', 'Beta']:
+        if col in comparison_data.columns:
+            comparison_data[col] = comparison_data[col].apply(
+                lambda x: f"{x:.2f}" if pd.notnull(x) else None
+            )
+    
+    # Format price with currency symbol
+    comparison_data['Price'] = comparison_data['Price'].apply(
+        lambda x: f"₹{x:.2f}" if pd.notnull(x) and is_indian else f"${x:.2f}" if pd.notnull(x) else None
+    )
+    
+    return comparison_data
+
 @st.cache_data(ttl=3600)
 def get_company_info(ticker):
     """

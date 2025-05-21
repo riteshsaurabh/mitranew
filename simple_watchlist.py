@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import json
 from datetime import datetime
+import yfinance as yf
 
 # File to store watchlist data
 WATCHLIST_FILE = "watchlists.json"
@@ -26,6 +27,90 @@ def save_watchlists(data):
 def get_watchlists():
     """Get all watchlists"""
     return load_watchlists()['watchlists']
+
+def add_to_watchlist(watchlist_name, symbol):
+    """Add a stock to a watchlist"""
+    data = load_watchlists()
+    
+    # Find the watchlist
+    for watchlist in data['watchlists']:
+        if watchlist['name'] == watchlist_name:
+            # Initialize stocks list if it doesn't exist
+            if 'stocks' not in watchlist:
+                watchlist['stocks'] = []
+                
+            # Check if stock already exists in the watchlist
+            if symbol not in watchlist['stocks']:
+                watchlist['stocks'].append(symbol)
+                save_watchlists(data)
+                return True
+            return False
+    
+    return False
+
+def display_watchlist(is_indian=False):
+    """Display watchlist in the sidebar"""
+    watchlists = get_watchlists()
+    
+    if not watchlists:
+        st.sidebar.info("No watchlists found. Add stocks to create one.")
+        
+        # Add a default watchlist button
+        if st.sidebar.button("Create Default Watchlist"):
+            default_name = "My Watchlist"
+            create_watchlist(default_name, "My favorite stocks")
+            st.sidebar.success(f"Created watchlist: {default_name}")
+            st.rerun()
+    else:
+        # Display existing watchlists
+        selected_watchlist = st.sidebar.selectbox(
+            "Select Watchlist",
+            [watchlist['name'] for watchlist in watchlists]
+        )
+        
+        # Find the selected watchlist
+        watchlist = next((w for w in watchlists if w['name'] == selected_watchlist), None)
+        
+        if watchlist and 'stocks' in watchlist and watchlist['stocks']:
+            # Display stocks in the watchlist
+            st.sidebar.markdown("### Stocks")
+            
+            # Create a simple table
+            stocks_data = []
+            for symbol in watchlist['stocks']:
+                try:
+                    # Get current price
+                    ticker = yf.Ticker(symbol)
+                    price = ticker.info.get('currentPrice', 'N/A')
+                    company = ticker.info.get('shortName', symbol)
+                    
+                    # Add to data list
+                    stocks_data.append({
+                        "Symbol": symbol,
+                        "Name": company[:15] + "..." if len(company) > 15 else company,
+                        "Price": f"{'₹' if is_indian else '$'}{price}" if price != 'N/A' else 'N/A'
+                    })
+                except:
+                    stocks_data.append({
+                        "Symbol": symbol,
+                        "Name": "Unknown",
+                        "Price": "N/A"
+                    })
+            
+            # Convert to DataFrame
+            if stocks_data:
+                df = pd.DataFrame(stocks_data)
+                st.sidebar.dataframe(df, hide_index=True, use_container_width=True)
+        else:
+            st.sidebar.info("No stocks in this watchlist yet.")
+        
+        # Add stock to watchlist
+        new_stock = st.sidebar.text_input("Add Stock Symbol", key="watchlist_add")
+        if st.sidebar.button("Add to Watchlist", key="add_to_watchlist_btn"):
+            if new_stock:
+                add_to_watchlist(selected_watchlist, new_stock)
+                st.sidebar.success(f"Added {new_stock} to {selected_watchlist}")
+                st.rerun()
 
 def create_watchlist(name, description=""):
     """Create a new watchlist"""
