@@ -808,53 +808,130 @@ if stock_symbol:
                     
                 # Create a function to display the P&L statement
                 def display_pl_statement(stock_symbol, is_indian=False):
+                    # Create a simple, reliable P&L display directly from Yahoo Finance data
+                    st.info("Fetching financial data from Yahoo Finance...")
+                    
                     try:
-                        # First try to get data from Screener.in for Indian stocks
-                        screener_data_available = False
-                        if is_indian:
-                            try:
-                                with st.spinner("Fetching financial data from Screener.in..."):
-                                    # Fetch all financial data from Screener.in
-                                    screener_data = screener_integration.fetch_data(stock_symbol)
+                        # Get the ticker data
+                        ticker = yf.Ticker(stock_symbol)
+                        
+                        # Try different endpoints to get the most data
+                        try:
+                            # First try to get income statement 
+                            income_data = ticker.income_stmt
+                            if income_data is None or income_data.empty:
+                                income_data = ticker.financials
+                            
+                            if income_data is None or income_data.empty:
+                                # Try quarterly data
+                                income_data = ticker.quarterly_income_stmt
+                                if income_data is None or income_data.empty:
+                                    income_data = ticker.quarterly_financials
+                            
+                            if income_data is not None and not income_data.empty:
+                                # Success! We have financial data
+                                st.success(f"Successfully retrieved financial data for {stock_symbol}")
+                                
+                                # Format the columns - convert dates to string format
+                                if isinstance(income_data.columns, pd.DatetimeIndex):
+                                    income_data.columns = income_data.columns.strftime('%b %Y')
+                                
+                                # Prepare the data - we want a good-looking P&L statement
+                                # Create a standardized P&L format with key metrics
+                                pl_items = [
+                                    "Total Revenue", 
+                                    "Cost of Revenue",
+                                    "Gross Profit",
+                                    "Operating Expense",
+                                    "Operating Income",
+                                    "Interest Expense", 
+                                    "Income Before Tax",
+                                    "Income Tax Expense", 
+                                    "Net Income",
+                                    "Basic EPS",
+                                    "Diluted EPS"
+                                ]
+                                
+                                # Create a new DataFrame with our desired metrics
+                                pl_data = pd.DataFrame(index=pl_items)
+                                
+                                # Map Yahoo Finance data to our format
+                                mapping = {
+                                    "Total Revenue": ["Total Revenue", "Revenue"],
+                                    "Cost of Revenue": ["Cost of Revenue", "Cost Of Revenue"],
+                                    "Gross Profit": ["Gross Profit"],
+                                    "Operating Expense": ["Operating Expense", "Total Operating Expenses"],
+                                    "Operating Income": ["Operating Income", "EBIT"],
+                                    "Interest Expense": ["Interest Expense"],
+                                    "Income Before Tax": ["Income Before Tax", "Pretax Income"],
+                                    "Income Tax Expense": ["Income Tax Expense", "Tax Provision"],
+                                    "Net Income": ["Net Income", "Net Income Common Stockholders"],
+                                    "Basic EPS": ["Basic EPS"],
+                                    "Diluted EPS": ["Diluted EPS", "EPS - Earnings Per Share"]
+                                }
+                                
+                                # Get the most recent 4 reporting periods
+                                columns_to_use = income_data.columns[:4]
+                                
+                                # Fill in our P&L DataFrame
+                                for pl_item in pl_items:
+                                    found = False
+                                    for possible_key in mapping[pl_item]:
+                                        if possible_key in income_data.index:
+                                            for col in columns_to_use:
+                                                value = income_data.loc[possible_key, col]
+                                                if is_indian:
+                                                    # Convert to crores for Indian stocks
+                                                    value = value / 10000000 if not pd.isna(value) else None
+                                                else:
+                                                    # Convert to millions for other stocks
+                                                    value = value / 1000000 if not pd.isna(value) else None
+                                                pl_data.loc[pl_item, col] = value
+                                            found = True
+                                            break
                                     
-                                    if screener_data and isinstance(screener_data, dict):
-                                        # Format the P&L data
-                                        formatted_df = screener_integration.format_pl_statement(screener_data, is_indian=True)
-                                        
-                                        if not formatted_df.empty:
-                                            st.success("Using financial data from Screener.in")
-                                            screener_data_available = True
-                                            
-                                            # Create HTML for the P&L table with styling
-                                            st.markdown("""
-                                            <style>
-                                            .dataframe {
-                                                width: 100%;
-                                                border-collapse: collapse;
-                                                font-family: Arial, sans-serif;
-                                            }
-                                            .dataframe th, .dataframe td {
-                                                text-align: right;
-                                                padding: 8px;
-                                                border: 1px solid #ddd;
-                                            }
-                                            .dataframe th {
-                                                background-color: #f5f5f5;
-                                            }
-                                            .dataframe tr:nth-child(3), .dataframe tr:nth-child(8), .dataframe tr:nth-child(10) {
-                                                font-weight: bold;
-                                            }
-                                            </style>
-                                            """, unsafe_allow_html=True)
-                                            
-                                            # Display the P&L table with real data
-                                            st.write(formatted_df.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
-                                            
-                                            # Don't need to use Yahoo Finance
-                                            return
-                            except Exception as e:
-                                st.warning(f"Could not fetch data from Screener.in: {str(e)}")
-                                st.info("Falling back to Yahoo Finance data")
+                                    if not found:
+                                        # If we didn't find a match, fill with None
+                                        for col in columns_to_use:
+                                            pl_data.loc[pl_item, col] = None
+                                
+                                # Format values for display - ensure consistent decimal places
+                                for col in pl_data.columns:
+                                    for idx in pl_data.index:
+                                        val = pl_data.loc[idx, col]
+                                        if pd.notna(val) and isinstance(val, (int, float)):
+                                            pl_data.loc[idx, col] = f"{val:.2f}"
+                                
+                                # Add styling
+                                st.markdown("""
+                                <style>
+                                .dataframe {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    font-family: Arial, sans-serif;
+                                }
+                                .dataframe th, .dataframe td {
+                                    text-align: right;
+                                    padding: 8px;
+                                    border: 1px solid #ddd;
+                                }
+                                .dataframe th {
+                                    background-color: #f5f5f5;
+                                }
+                                .dataframe tr:nth-child(3), .dataframe tr:nth-child(9), .dataframe tr:nth-child(11) {
+                                    font-weight: bold;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                
+                                # Convert to HTML and display
+                                st.write(pl_data.to_html(classes='dataframe', escape=False), unsafe_allow_html=True)
+                                return
+                        except Exception as e:
+                            st.error(f"Error processing financial data: {str(e)}")
+                            
+                    except Exception as e:
+                        st.error(f"Could not retrieve financial data: {str(e)}")
                         
                         # If Screener data is not available or it's not an Indian stock, use Yahoo Finance
                         if not screener_data_available:
